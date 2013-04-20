@@ -37,9 +37,10 @@ int main()
             *anteriorBody, locGAInAnterior, orientGAInAnterior);
     // Joint coordinates.
     CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
-    groundAnteriorCS[0].setName("tilt");
-    groundAnteriorCS[1].setName("yaw");
-    groundAnteriorCS[2].setName("pitch");
+    // TODO lines below cause segfault
+    //groundAnteriorCS[0].setName("tilt");
+    //groundAnteriorCS[1].setName("yaw");
+    //groundAnteriorCS[2].setName("pitch");
 
     // Add bodies to model.
     cat.addBody(anteriorBody);

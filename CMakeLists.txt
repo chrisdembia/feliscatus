@@ -66,9 +66,24 @@ ADD_EXECUTABLE(${EXECUTABLE_NAME} model.cpp)
 
 TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME} ${OSIM_LIBRARIES})
 
-# Copy necessary files to build directory.
-#add_custom_command(TARGET ${EXECUTABLE_NAME}
-#    POST_BUILD
-#    COMMAND ${CMAKE_COMMAND} -E copy_directory
-#    ${CMAKE_SOURCE_DIR}/input
-#    ${CMAKE_BINARY_DIR}/input)
+# Copy geometry files to the build directory, so OpenSim can find the files
+# specified in the model file.
+add_custom_command(TARGET ${EXECUTABLE_NAME}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/Geometry
+    ${CMAKE_BINARY_DIR})
+
+# Copy Geometry files to the OpenSim Geometry folder, so that OpenSim can find
+# the geometry files specified in the model file. This is only necessary if we
+# plan to move the model file around, and not just use it from the build
+# directory.
+#FILE(GLOB GEOMETRY_FILES ${CMAKE_SOURCE_DIR}/Geometry/*)
+#FOREACH(geometryFile ${GEOMETRY_FILES})
+#    ADD_CUSTOM_COMMAND(
+#        TARGET ${TARGET}
+#        COMMAND ${CMAKE_COMMAND}
+#        ARGS -E copy
+#        ${geometryFile}
+#        $ENV{OPENSIM_HOME}/Geometry
+#ENDFOREACH(geometryFile)
