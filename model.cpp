@@ -9,9 +9,10 @@ using std::vector;
 
 using OpenSim::Body;
 using OpenSim::CoordinateSet;
-using OpenSim::FreeJoint;
+using OpenSim::CustomJoint;
 using OpenSim::PinJoint;
 using OpenSim::Model;
+using OpenSim::SpatialTransform;
 
 using SimTK::Inertia;
 using SimTK::Pi;
@@ -58,26 +59,29 @@ int main()
 	// below.
     Vec3 locGAInAnterior(0);
     Vec3 orientGAInAnterior(0);
-    FreeJoint * groundAnterior = new FreeJoint("ground_anterior",
+    CustomJoint * groundAnterior = new CustomJoint("ground_anterior",
             ground, locGAInGround, orientGAInGround,
             *anteriorBody, locGAInAnterior, orientGAInAnterior);
+	SpatialTransform * groundAnteriorST = new SpatialTransform();
+	groundAnteriorST->connectToJoint(*groundAnterior);
+
     // Joint coordinates.
-	// TODO would prefer that these rotations could be "body-fixed".
     CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
-	groundAnteriorCS[0].setName("anterior_rx");
-	double groundAnteriorCS0range[2] = {-3 * Pi, 3 * Pi};
+
+	groundAnteriorCS[0].setName("anterior_flail");
+	double groundAnteriorCS0range[2] = {-Pi, Pi};
 	groundAnteriorCS[0].setRange(groundAnteriorCS0range);
 	groundAnteriorCS[0].setDefaultValue(0.0);
 	groundAnteriorCS[0].setDefaultLocked(false);
 
-	groundAnteriorCS[1].setName("anterior_ry");
+	groundAnteriorCS[1].setName("anterior_sprawl");
 	double groundAnteriorCS1range[2] = {-Pi, Pi};
 	groundAnteriorCS[1].setRange(groundAnteriorCS1range);
 	groundAnteriorCS[1].setDefaultValue(0.0);
 	groundAnteriorCS[1].setDefaultLocked(false);
 
-	groundAnteriorCS[2].setName("anterior_rz");
-	double groundAnteriorCS2range[2] = {-2 * Pi, 2 * Pi};
+	groundAnteriorCS[2].setName("anterior_roll");
+	double groundAnteriorCS2range[2] = {-3 * Pi, 3 * Pi};
 	groundAnteriorCS[2].setRange(groundAnteriorCS2range);
 	groundAnteriorCS[2].setDefaultValue(0.0);
 	groundAnteriorCS[2].setDefaultLocked(false);
