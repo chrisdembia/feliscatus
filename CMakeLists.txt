@@ -78,6 +78,14 @@ add_custom_command(TARGET ${EXECUTABLE_NAME}
     ${CMAKE_SOURCE_DIR}/Geometry
     $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>)
 
+# Also copy to build top-level directory, because this is where the .osim is placed
+# if executable is run directly from Visual Studio.
+add_custom_command(TARGET ${EXECUTABLE_NAME}
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/Geometry
+    ${CMAKE_BINARY_DIR})
+	
 # Copy Geometry files to the OpenSim Geometry folder, so that OpenSim can find
 # the geometry files specified in the model file. This is only necessary if we
 # plan to move the model file around, and not just use it from the build
