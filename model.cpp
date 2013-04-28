@@ -9,7 +9,7 @@ using std::vector;
 
 using OpenSim::Body;
 using OpenSim::CoordinateSet;
-using OpenSim::CustomJoint;
+using OpenSim::PinJoint;
 using OpenSim::Model;
 
 using SimTK::Vec3;
@@ -24,15 +24,16 @@ int main()
 
     // Anterior half of cat.
     Body * anteriorBody = new Body();
+
     anteriorBody->setName("anteriorBody");
-    anteriorBody->addDisplayGeometry("treadmill.vtp");
+    anteriorBody->addDisplayGeometry("feliscatus_cylinder_with_two_offset_feet_nubs.obj");
 
     // Joint between the ground and the anterior segment.
     Vec3 locGAInGround(0);
     Vec3 orientGAInGround(0);
     Vec3 locGAInAnterior(0);
     Vec3 orientGAInAnterior(0);
-    CustomJoint * groundAnterior = new CustomJoint("ground_anterior",
+    PinJoint * groundAnterior = new PinJoint("ground_anterior",
             ground, locGAInGround, orientGAInGround,
             *anteriorBody, locGAInAnterior, orientGAInAnterior);
     // Joint coordinates.

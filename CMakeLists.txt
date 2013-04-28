@@ -24,7 +24,7 @@ SET(SIMTK_HEADERS_DIR ${OPENSIM_INSTALL_DIR}/sdk/include/SimTK/include)
 SET(OPENSIM_HEADERS_DIR ${OPENSIM_INSTALL_DIR}/sdk/include)
 INCLUDE_DIRECTORIES(${SIMTK_HEADERS_DIR} ${OPENSIM_HEADERS_DIR})
 # Libraries and dlls
-SET(OPENSIM_LIBS_DIR ${OPENSIM_INSTALL_DIR}/lib)
+SET(OPENSIM_LIBS_DIR ${OPENSIM_INSTALL_DIR}/sdk/lib ${OPENSIM_INSTALL_DIR}/lib)
 SET(OPENSIM_DLLS_DIR ${OPENSIM_INSTALL_DIR}/bin)
 LINK_DIRECTORIES(${OPENSIM_LIBS_DIR} ${OPENSIM_DLLS_DIR})
 
@@ -44,17 +44,21 @@ MARK_AS_ADVANCED(CMAKE_INSTALL_PREFIX)
 MARK_AS_ADVANCED(EXECUTABLE_OUTPUT_PATH)
 MARK_AS_ADVANCED(LIBRARY_OUTPUT_PATH)
 
+SET(NameSpace "OpenSim_" 
+	CACHE STRING "Prefix for simtk lib names, includes trailing '_'. Leave empty to use stock SimTK libraries.")
+
 SET(OSIM_LIBRARIES
-	debug osimCommon_d optimized osimCommon
-	debug osimSimulation_d optimized osimSimulation
-	debug osimAnalyses_d optimized osimAnalyses
-	debug osimActuators_d optimized osimActuators
-	debug osimTools_d optimized osimTools
-	debug SimTKcommon_d optimized SimTKcommon
-	debug SimTKmath_d optimized SimTKmath
-	debug SimTKsimbody_d optimized SimTKsimbody
-	${PLATFORM_LIBS}
-    )
+    debug osimSimulation_d    optimized osimSimulation
+    debug osimActuators_d    optimized osimActuators
+    debug osimCommon_d        optimized osimCommon
+    debug osimAnalyses_d    optimized osimAnalyses
+    debug osimTools_d        optimized osimTools
+    debug ${NameSpace}SimTKcommon_d optimized ${NameSpace}SimTKcommon
+    debug ${NameSpace}SimTKmath_d optimized  ${NameSpace}SimTKmath
+    debug ${NameSpace}SimTKsimbody_d optimized ${NameSpace}SimTKsimbody
+    SimTKlapack
+    ${PLATFORM_LIBS}
+)
 
 ################################################################################
 
@@ -72,7 +76,7 @@ add_custom_command(TARGET ${EXECUTABLE_NAME}
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/Geometry
-    ${CMAKE_BINARY_DIR})
+    $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>)
 
 # Copy Geometry files to the OpenSim Geometry folder, so that OpenSim can find
 # the geometry files specified in the model file. This is only necessary if we
@@ -81,9 +85,19 @@ add_custom_command(TARGET ${EXECUTABLE_NAME}
 #FILE(GLOB GEOMETRY_FILES ${CMAKE_SOURCE_DIR}/Geometry/*)
 #FOREACH(geometryFile ${GEOMETRY_FILES})
 #    ADD_CUSTOM_COMMAND(
-#        TARGET ${TARGET}
-#        COMMAND ${CMAKE_COMMAND}
-#        ARGS -E copy
-#        ${geometryFile}
-#        $ENV{OPENSIM_HOME}/Geometry
+        #TARGET ${TARGET}
+        #COMMAND ${CMAKE_COMMAND}
+        #ARGS -E copy
+        #${geometryFile}
+        #$ENV{OPENSIM_HOME}/Geometry)
 #ENDFOREACH(geometryFile)
+
+#FILE(GLOB DATA_FILES ${CMAKE*.obj)
+#FOREACH (dataFile ${DATA_FILES})
+# ADD_CUSTOM_COMMAND(
+    #TARGET ${TARGET}
+    #COMMAND ${CMAKE_COMMAND}
+    #ARGS -E copy
+    #${dataFile}
+    #${OpenSimTugOfWar_BINARY_DIR})
+ #ENDFOREACH (dataFile) 
