@@ -151,7 +151,7 @@ int main()
 	// Joint between the anterior and posterior bodies.
 	// TODO there is a u-joint class
 	Vec3 locAPInAnterior(0);
-    Vec3 orientAPInAnterior(0, 0, 0.5 * Pi);
+    Vec3 orientAPInAnterior(0, 0, 0);
     Vec3 locAPInPosterior(0);
     Vec3 orientAPInPosterior(0);
     PinJoint * anteriorPosterior = new PinJoint("anterior_posterior",
