@@ -10,6 +10,10 @@ PROJECT(${PROJ_NAME})
 # $ENV{OPENSIM_HOME}/sdk/APIExamples/
 INCLUDE_DIRECTORIES(${OpenSim_SOURCE_DIR} ${OpenSim_SOURCE_DIR}/Vendors)
 
+SET(USING_SIMBODY_TRUNK FALSE
+    CACHE BOOL "If Simbody is built from trunk, then we need different
+    libraries.")
+
 SET(OPENSIM_INSTALL_DIR $ENV{OPENSIM_HOME}
 		CACHE PATH "Top-level directory of OpenSim install")
 
@@ -28,6 +32,9 @@ SET(OPENSIM_LIBS_DIR ${OPENSIM_INSTALL_DIR}/sdk/lib ${OPENSIM_INSTALL_DIR}/lib)
 SET(OPENSIM_DLLS_DIR ${OPENSIM_INSTALL_DIR}/bin)
 LINK_DIRECTORIES(${OPENSIM_LIBS_DIR} ${OPENSIM_DLLS_DIR})
 
+SET(NameSpace "OpenSim_" 
+	CACHE STRING "Prefix for simtk lib names, includes trailing '_'. Leave empty to use stock SimTK libraries.")
+
 IF(WIN32)
 	SET(PLATFORM_LIBS  pthreadVC2)
 ELSE (WIN32)
@@ -44,8 +51,11 @@ MARK_AS_ADVANCED(CMAKE_INSTALL_PREFIX)
 MARK_AS_ADVANCED(EXECUTABLE_OUTPUT_PATH)
 MARK_AS_ADVANCED(LIBRARY_OUTPUT_PATH)
 
-SET(NameSpace "OpenSim_" 
-	CACHE STRING "Prefix for simtk lib names, includes trailing '_'. Leave empty to use stock SimTK libraries.")
+IF(USING_SIMBODY_TRUNK)
+    SET(SIMBODY_LAPACK "")
+ELSE(USING_SIMBODY_TRUNK)
+    SET(SIMBODY_LAPACK SimTKlapack)
+ENDIF(USING_SIMBODY_TRUNK)
 
 SET(OSIM_LIBRARIES
     debug osimSimulation_d    optimized osimSimulation
@@ -56,7 +66,7 @@ SET(OSIM_LIBRARIES
     debug ${NameSpace}SimTKcommon_d optimized ${NameSpace}SimTKcommon
     debug ${NameSpace}SimTKmath_d optimized  ${NameSpace}SimTKmath
     debug ${NameSpace}SimTKsimbody_d optimized ${NameSpace}SimTKsimbody
-    SimTKlapack
+    ${SIMBODY_LAPACK}
     ${PLATFORM_LIBS}
 )
 
