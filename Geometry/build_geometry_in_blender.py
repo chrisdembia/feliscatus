@@ -31,8 +31,8 @@ nub = list()
 for i in range(len(offset_sign)):
     nub.append(bpy.ops.mesh.primitive_cylinder_add(vertices=50,
             radius=0.5*nub_diameter, depth=nub_length,
-            location=(0.75*torso_length, -0.35*torso_diameter, offset_sign[i]*nub_offset),
-            rotation=(0.5*pi, 0, 0)))
+            location=(0.75*torso_length, offset_sign[i]*nub_offset, -0.35*torso_diameter),
+            rotation=(0, 0, 0)))
 
 bpy.ops.export_scene.obj(filepath=os.path.join(os.path.split(bpy.data.filepath)[0], 
         "feliscatus_cylinder_with_two_offset_feet_nubs.obj"))
