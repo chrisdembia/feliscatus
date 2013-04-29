@@ -18,12 +18,11 @@ using SimTK::Inertia;
 using SimTK::Pi;
 using SimTK::Vec3;
 
-
 int main()
 {
 
-	// We use the general convention that body origins are at joint locations, and thus mass centers
-	// are specified to be at some further location.
+    // We use the general convention that body origins are at joint locations,
+    // and thus mass centers are specified to be at some further location.
 
 	// Numbers.
 	double mass = 1;
@@ -45,18 +44,19 @@ int main()
 
     // Anterior half of cat.
     Body * anteriorBody = new Body();
-	anteriorBody->setMass(0.0);
-	anteriorBody->setMassCenter(Vec3());
+	anteriorBody->setMass(mass);
+	anteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
 	anteriorBody->setInertia(inertia);
 
     anteriorBody->setName("anteriorBody");
-    anteriorBody->addDisplayGeometry("feliscatus_cylinder_with_two_offset_feet_nubs.obj");
+    anteriorBody->addDisplayGeometry(
+            "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
 
     // Joint between the ground and the anterior body.
     Vec3 locGAInGround(0);
     Vec3 orientGAInGround(0);
-	// This joint is at the same location (in any frame) as the anterior_posterior joint defined
-	// below.
+    // This joint is at the same location (in any frame) as the
+    // anterior_posterior joint defined below.
     Vec3 locGAInAnterior(0);
     Vec3 orientGAInAnterior(0);
     CustomJoint * groundAnterior = new CustomJoint("ground_anterior",
@@ -64,12 +64,13 @@ int main()
             *anteriorBody, locGAInAnterior, orientGAInAnterior);
 	SpatialTransform * groundAnteriorST = new SpatialTransform();
 	groundAnteriorST->connectToJoint(*groundAnterior);
+    groundAnteriorST->
 	groundAnteriorST->constructIndependentAxes(6, 0);
-	// This gets the first TransformAxis.
-	cout << "COORD AXIS NAMES: " << groundAnteriorST[0].getCoordinateNames() << endl;
+	// // This gets the first TransformAxis.
+	// cout << "COORD AXIS NAMES: " << groundAnteriorST[0].getCoordinateNames() << endl;
 
     // Joint coordinates.
-    CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
+    //CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
 
 	groundAnteriorCS[0].setName("anterior_flail");
 	double groundAnteriorCS0range[2] = {-Pi, Pi};
@@ -107,8 +108,8 @@ int main()
 
 	// Posterior half of cat.
 	Body * posteriorBody = new Body();
-	posteriorBody->setMass(0.0);
-	posteriorBody->setMassCenter(Vec3());
+	posteriorBody->setMass(mass);
+	posteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
 	posteriorBody->setInertia(inertia);
 
 	posteriorBody->setName("posteriorBody");

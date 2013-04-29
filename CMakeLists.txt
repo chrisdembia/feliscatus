@@ -18,7 +18,7 @@ SET(OPENSIM_INSTALL_DIR $ENV{OPENSIM_HOME}
 		CACHE PATH "Top-level directory of OpenSim install")
 
 # To add Debug feature add ";Debug" after Release on the line below
-SET(CMAKE_CONFIGURATION_TYPES "RelWithDebInfo;Release"
+SET(CMAKE_CONFIGURATION_TYPES "RelWithDebInfo;Release;Debug"
       CACHE STRING "Semicolon separated list of supported configuration types,
       only supports Debug, Release, MinSizeRel, and RelWithDebInfo, anything
       else will be ignored." FORCE)
@@ -32,30 +32,30 @@ SET(OPENSIM_LIBS_DIR ${OPENSIM_INSTALL_DIR}/sdk/lib ${OPENSIM_INSTALL_DIR}/lib)
 SET(OPENSIM_DLLS_DIR ${OPENSIM_INSTALL_DIR}/bin)
 LINK_DIRECTORIES(${OPENSIM_LIBS_DIR} ${OPENSIM_DLLS_DIR})
 
-SET(NameSpace "OpenSim_" 
-	CACHE STRING "Prefix for simtk lib names, includes trailing '_'. Leave empty to use stock SimTK libraries.")
-
 IF(WIN32)
-	SET(PLATFORM_LIBS  pthreadVC2)
-ELSE (WIN32)
-  SET(NameSpace "")
-  IF(APPLE)
-	SET(PLATFORM_LIBS  SimTKAtlas)
-  ELSE(APPLE)
-	SET(PLTAFORM_LIBS SimTKAtlas_Lin_generic)
-  ENDIF(APPLE)
-ENDIF (WIN32)
-
-# The user is not expected to need to use these variables.
-MARK_AS_ADVANCED(CMAKE_INSTALL_PREFIX)
-MARK_AS_ADVANCED(EXECUTABLE_OUTPUT_PATH)
-MARK_AS_ADVANCED(LIBRARY_OUTPUT_PATH)
+    SET(NameSpace "OpenSim_" 
+        CACHE STRING "Prefix for simtk lib names, includes trailing '_'. Leave
+        empty to use stock SimTK libraries.")
+    SET(PLATFORM_LIBS  pthreadVC2)
+ELSE(WIN32)
+    SET(NameSpace "")
+    IF(APPLE)
+        SET(PLATFORM_LIBS  SimTKAtlas)
+    ELSE(APPLE)
+        SET(PLTAFORM_LIBS SimTKAtlas_Lin_generic)
+    ENDIF(APPLE)
+ENDIF(WIN32)
 
 IF(USING_SIMBODY_TRUNK)
     SET(SIMBODY_LAPACK "")
 ELSE(USING_SIMBODY_TRUNK)
     SET(SIMBODY_LAPACK SimTKlapack)
 ENDIF(USING_SIMBODY_TRUNK)
+
+# The user is not expected to need to use these variables.
+MARK_AS_ADVANCED(CMAKE_INSTALL_PREFIX)
+MARK_AS_ADVANCED(EXECUTABLE_OUTPUT_PATH)
+MARK_AS_ADVANCED(LIBRARY_OUTPUT_PATH)
 
 SET(OSIM_LIBRARIES
     debug osimSimulation_d    optimized osimSimulation
