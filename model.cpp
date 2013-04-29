@@ -64,6 +64,9 @@ int main()
             *anteriorBody, locGAInAnterior, orientGAInAnterior);
 	SpatialTransform * groundAnteriorST = new SpatialTransform();
 	groundAnteriorST->connectToJoint(*groundAnterior);
+	groundAnteriorST->constructIndependentAxes(6, 0);
+	// This gets the first TransformAxis.
+	cout << "COORD AXIS NAMES: " << groundAnteriorST[0].getCoordinateNames() << endl;
 
     // Joint coordinates.
     CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
