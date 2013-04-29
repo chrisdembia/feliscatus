@@ -26,13 +26,15 @@ int main()
     // and thus mass centers are specified to be at some further location.
 
 	// Numbers.
-	double mass = 1;
-	double Ixx = 1;
-	double Iyy = 1;
-	double Izz = 1;
-	double Ixy = 0;
-	double Ixz = 0;
-	double Iyz = 0;
+	double bodyLength = 1; // m
+	double bodyDiam = 1; // m
+	double mass = 1; // kg
+	double Ixx = 1; // kg-m^2
+	double Iyy = 1; // kg-m^2
+	double Izz = 1; // kg-m^2
+	double Ixy = 0; // kg-m^2
+	double Ixz = 0; // kg-m^2
+	double Iyz = 0; // kg-m^2
 	// TODO is inertia about center of mass?
 	Inertia inertia = Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
 
@@ -46,7 +48,7 @@ int main()
     // Anterior half of cat.
     Body * anteriorBody = new Body();
 	anteriorBody->setMass(mass);
-	anteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
+	anteriorBody->setMassCenter(Vec3(-0.5 * bodyDiam, 0.0, 0.0));
 	anteriorBody->setInertia(inertia);
 
     anteriorBody->setName("anteriorBody");
@@ -136,12 +138,10 @@ int main()
 	groundAnteriorCS[5].setDefaultValue(0.0);
 	groundAnteriorCS[5].setDefaultLocked(false);
 
-	cout << "DEBUG 1" << endl;
-
 	// Posterior half of cat.
 	Body * posteriorBody = new Body();
 	posteriorBody->setMass(mass);
-	posteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
+	posteriorBody->setMassCenter(Vec3(0.5 * bodyLength, 0.0, 0.0));
 	posteriorBody->setInertia(inertia);
 
 	posteriorBody->setName("posteriorBody");
@@ -149,8 +149,9 @@ int main()
 	// TODO rotate around. posteriorBody->updDisplayer()->setTransform();
 
 	// Joint between the anterior and posterior bodies.
+	// TODO there is a u-joint class
 	Vec3 locAPInAnterior(0);
-    Vec3 orientAPInAnterior(0);
+    Vec3 orientAPInAnterior(0, 0, 0.5 * Pi);
     Vec3 locAPInPosterior(0);
     Vec3 orientAPInPosterior(0);
     PinJoint * anteriorPosterior = new PinJoint("anterior_posterior",
