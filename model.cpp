@@ -7,23 +7,27 @@ using std::endl;
 using std::string;
 using std::vector;
 
+using OpenSim::AnalyticCylinder;
 using OpenSim::Array;
 using OpenSim::Body;
 using OpenSim::CoordinateSet;
 using OpenSim::CustomJoint;
+using OpenSim::DisplayGeometry;
 using OpenSim::PinJoint;
 using OpenSim::Model;
 using OpenSim::SpatialTransform;
 
 using SimTK::Inertia;
 using SimTK::Pi;
+using SimTK::Rotation;
+using SimTK::Transform;
 using SimTK::Vec3;
 
 int main()
 {
-
     // We use the general convention that body origins are at joint locations,
     // and thus mass centers are specified to be at some further location.
+    // Furthermore, TODO about "pre-rotations".
 
 	// Numbers.
 	double bodyLength = 1; // m
@@ -45,15 +49,23 @@ int main()
     Body & ground = cat.getGroundBody();
 	ground.addDisplayGeometry("treadmill.vtp");
 
+	// ----- Body construction and mass properties.
+
     // Anterior half of cat.
     Body * anteriorBody = new Body();
+	anteriorBody->setName("anteriorBody");
 	anteriorBody->setMass(mass);
-	anteriorBody->setMassCenter(Vec3(-0.5 * bodyDiam, 0.0, 0.0));
+	anteriorBody->setMassCenter(Vec3(0.5 * bodyDiam, 0.0, 0.0));
 	anteriorBody->setInertia(inertia);
 
-    anteriorBody->setName("anteriorBody");
-    anteriorBody->addDisplayGeometry(
-            "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
+	// Posterior half of cat.
+	Body * posteriorBody = new Body();
+	posteriorBody->setName("posteriorBody");
+	posteriorBody->setMass(mass);
+	posteriorBody->setMassCenter(Vec3(-0.5 * bodyLength, 0.0, 0.0));
+	posteriorBody->setInertia(inertia);
+
+	// ----- Joints.
 
     // --- Joint between the ground and the anterior body.
 
@@ -137,21 +149,11 @@ int main()
 	groundAnteriorCS[5].setRange(groundAnteriorCS5range);
 	groundAnteriorCS[5].setDefaultValue(0.0);
 	groundAnteriorCS[5].setDefaultLocked(false);
-
-	// Posterior half of cat.
-	Body * posteriorBody = new Body();
-	posteriorBody->setMass(mass);
-	posteriorBody->setMassCenter(Vec3(0.5 * bodyLength, 0.0, 0.0));
-	posteriorBody->setInertia(inertia);
-
-	posteriorBody->setName("posteriorBody");
-    posteriorBody->addDisplayGeometry("feliscatus_cylinder_with_two_offset_feet_nubs.obj");
-	// TODO rotate around. posteriorBody->updDisplayer()->setTransform();
-
-	// Joint between the anterior and posterior bodies.
+        
+	// -- Joint between the anterior and posterior bodies.
 	// TODO there is a u-joint class
 	Vec3 locAPInAnterior(0);
-    Vec3 orientAPInAnterior(0, 0, 0);
+    Vec3 orientAPInAnterior(0, 0, 0); // TODO use Pi, or just place geom elsewhere?
     Vec3 locAPInPosterior(0);
     Vec3 orientAPInPosterior(0);
     PinJoint * anteriorPosterior = new PinJoint("anterior_posterior",
@@ -166,7 +168,32 @@ int main()
 	anteriorPosteriorCS[0].setDefaultValue(0.0);
 	anteriorPosteriorCS[0].setDefaultLocked(false);
 
-    // Add bodies to model.
+
+	// ----- Geometry.
+    DisplayGeometry * anteriorDisplay = 
+        new DisplayGeometry("feliscatus_cylinder_with_two_offset_feet_nubs.obj");
+    anteriorDisplay->setOpacity(0.5);
+    //anteriorDisplay->setColor(Vec3(0.5, 0.5, 0.5));
+    anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorDisplay);
+    anteriorBody->updDisplayer()->setShowAxes(true);
+
+    DisplayGeometry * posteriorDisplay = 
+        new DisplayGeometry("feliscatus_cylinder_with_two_offset_feet_nubs.obj");
+    posteriorDisplay->setOpacity(0.5);
+    //posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
+    Rotation rot;
+    rot.setRotationFromAngleAboutY(Pi);
+    posteriorDisplay->setTransform(Transform(rot));
+    posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorDisplay);
+    posteriorBody->updDisplayer()->setShowAxes(true);   
+
+    
+    
+
+    // ---- Coordinate limits.
+    // TODO 
+
+    // -- Add bodies to model.
     cat.addBody(anteriorBody);
 	cat.addBody(posteriorBody);
 
