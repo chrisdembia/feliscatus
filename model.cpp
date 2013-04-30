@@ -7,7 +7,6 @@ using std::endl;
 using std::string;
 using std::vector;
 
-using OpenSim::AnalyticCylinder;
 using OpenSim::Array;
 using OpenSim::Body;
 using OpenSim::CoordinateSet;
@@ -23,6 +22,10 @@ using SimTK::Rotation;
 using SimTK::Transform;
 using SimTK::Vec3;
 
+/**
+ * Creates an OpenSim model of a cat, sufficient for exploring the cat's
+ * righting reflex.
+ * */
 int main()
 {
     // We use the general convention that body origins are at joint locations,

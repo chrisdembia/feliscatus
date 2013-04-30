@@ -74,23 +74,25 @@ SET(OSIM_LIBRARIES
 
 # The below is specific to this project.
 
-# EXECUTABLE to make XML template files.
-SET(EXECUTABLE_NAME model)
-ADD_EXECUTABLE(${EXECUTABLE_NAME} model.cpp)
+SET(MODEL_EXEC_NAME model)
+ADD_EXECUTABLE(${MODEL_EXEC_NAME} model.cpp)
+TARGET_LINK_LIBRARIES(${MODEL_EXEC_NAME} ${OSIM_LIBRARIES})
 
-TARGET_LINK_LIBRARIES(${EXECUTABLE_NAME} ${OSIM_LIBRARIES})
+SET(SIMULATE_EXEC_NAME simulate)
+ADD_EXECUTABLE(${SIMULATE_EXEC_NAME} simulate.cpp)
+TARGET_LINK_LIBRARIES(${SIMULATE_EXEC_NAME} ${OSIM_LIBRARIES})
 
 # Copy geometry files to the build directory, so OpenSim can find the files
 # specified in the model file.
-add_custom_command(TARGET ${EXECUTABLE_NAME}
+add_custom_command(TARGET ${MODEL_EXEC_NAME}
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/Geometry
-    $<TARGET_FILE_DIR:${EXECUTABLE_NAME}>)
+    $<TARGET_FILE_DIR:${MODEL_EXEC_NAME}>)
 
 # Also copy to build top-level directory, because this is where the .osim is placed
 # if executable is run directly from Visual Studio.
-add_custom_command(TARGET ${EXECUTABLE_NAME}
+add_custom_command(TARGET ${MODEL_EXEC_NAME}
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/Geometry
