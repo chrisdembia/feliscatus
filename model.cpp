@@ -174,20 +174,24 @@ int main()
 
 	// ----- Geometry.
     DisplayGeometry * anteriorDisplay = 
-        new DisplayGeometry("feliscatus_cylinder_with_two_offset_feet_nubs.obj");
+        new DisplayGeometry(
+                "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
     anteriorDisplay->setOpacity(0.5);
-    //anteriorDisplay->setColor(Vec3(0.5, 0.5, 0.5));
-    anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorDisplay);
+    anteriorDisplay->setColor(Vec3(0.5, 0.5, 0.5));
+    anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
+            anteriorDisplay);
     anteriorBody->updDisplayer()->setShowAxes(true);
 
     DisplayGeometry * posteriorDisplay = 
-        new DisplayGeometry("feliscatus_cylinder_with_two_offset_feet_nubs.obj");
+        new DisplayGeometry(
+                "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
     posteriorDisplay->setOpacity(0.5);
-    //posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
+    posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
     Rotation rot;
     rot.setRotationFromAngleAboutY(Pi);
     posteriorDisplay->setTransform(Transform(rot));
-    posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorDisplay);
+    posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
+            posteriorDisplay);
     posteriorBody->updDisplayer()->setShowAxes(true);   
 
     
