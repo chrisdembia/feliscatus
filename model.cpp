@@ -28,21 +28,32 @@ using SimTK::Vec3;
  * */
 int main()
 {
-    // We use the general convention that body origins are at joint locations,
-    // and thus mass centers are specified to be at some further location.
-    // Furthermore, TODO about "pre-rotations".
+    // This model allows for the "salient features of motion" of a falling cat
+	// first identified by Kane and Scher (1969). These include:
+	//		1) The torso bends but does not twist.
+	//		2) At release, the spine is bent forward. Afterwards, the spine is
+	//		   first bent to one side, the backward, then to the other side,
+	//		   and finally forwards again. At the end of this "oscillation,"
+	//		   the cat has turned over.
+	//		3) The backwards bend that the cat experiences during its turning
+	//		   maneuver is more pronounced that its initial or final forward
+	//		   bends.
+	// We use the general convention that body origins are at joint locations,
+    // and thus mass centers are specified to be some distance away. Furthermore,
+	// the model contains several "dummy" coordinate systems (i.e., massless
+	// bodies) that are used to specify rotational relations between the anterior
+	// and posterior segments of the cat.
 
-	// Numbers.
+	// Numbers (scalable)
 	double bodyLength = 1; // m
 	double bodyDiam = 1; // m
 	double mass = 1; // kg
-	double Ixx = 1; // kg-m^2
+	double Ixx = 1 + mass*(bodyLength/2.0)*(bodyLength/2.0); // kg-m^2, shifted because of displaced joint
 	double Iyy = 1; // kg-m^2
 	double Izz = 1; // kg-m^2
 	double Ixy = 0; // kg-m^2
 	double Ixz = 0; // kg-m^2
 	double Iyz = 0; // kg-m^2
-	// TODO is inertia about center of mass?
 	Inertia inertia = Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
 
     // Create the model.
@@ -58,7 +69,7 @@ int main()
     Body * anteriorBody = new Body();
 	anteriorBody->setName("anteriorBody");
 	anteriorBody->setMass(mass);
-	anteriorBody->setMassCenter(Vec3(0.5 * bodyDiam, 0.0, 0.0));
+	anteriorBody->setMassCenter(Vec3(0.5 * bodyLength, 0.0, 0.0));  // why did you have 'bodyDiam' here?
 	anteriorBody->setInertia(inertia);
 
 	// Posterior half of cat.
@@ -67,6 +78,37 @@ int main()
 	posteriorBody->setMass(mass);
 	posteriorBody->setMassCenter(Vec3(-0.5 * bodyLength, 0.0, 0.0));
 	posteriorBody->setInertia(inertia);
+
+	// NOTE: Why are we shifting the mass center at all? Don't we only want
+	// to shift the body's moment of inertia (with parallel-axis theorem, see
+	// above) and the location of the joint relative to the mass center?
+
+	// MASSLESS bodies (i.e., defining coordinate frames for rotation)
+
+	// Frame in which the X-axis points along ray K from Kane and Scher (1969).
+	// K lies in the XY plane of the coordinate frame attached to the posterior
+	// half of the cat.
+	Body * K = new Body();
+	posteriorBody->setName("K");
+	posteriorBody->setMass(0.0);
+	posteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
+
+	// Frame with the following axes (Kane and Scher, 1969):
+	//		X = X-axis from coordinate frame attached to the anterior half of the cat
+	//		Y = normal to X and lying in the plane defined by X and ray K
+	//		Z = mutually perpendicular to X and Y 
+	Body * B = new Body();
+	posteriorBody->setName("B");
+	posteriorBody->setMass(0.0);
+	posteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
+
+	// Frame in which X-axis points along ray N from Kane and Scher (1969). N
+	// is mutually perpendicular to the X-axes of the coordinate frames attached
+	// to the anterior and posterior halves of the cat.
+	Body * N = new Body();
+	posteriorBody->setName("N");
+	posteriorBody->setMass(0.0);
+	posteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
 
 	// ----- Joints.
 
