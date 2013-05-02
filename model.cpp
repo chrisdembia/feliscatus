@@ -30,21 +30,23 @@ using SimTK::Vec3;
  * */
 int main()
 {
-    // This model allows for the "salient features of motion" of a falling cat
-	// first identified by Kane and Scher (1969). These include:
-	//		1) The torso bends but does not twist.
-	//		2) At release, the spine is bent forward. Afterwards, the spine is
-	//		   first bent to one side, the backward, then to the other side,
-	//		   and finally forwards again. At the end of this "oscillation,"
-	//		   the cat has turned over.
-	//		3) The backwards bend that the cat experiences during its turning
-	//		   maneuver is more pronounced that its initial or final forward
-	//		   bends.
-	// We use the general convention that body origins are at joint locations,
-    // and thus mass centers are specified to be some distance away. Furthermore,
-	// the model contains several "dummy" coordinate systems (i.e., massless
-	// bodies) that are used to specify rotational relations between the anterior
-	// and posterior segments of the cat.
+    /**
+    This model allows for the "salient features of motion" of a falling cat
+	first identified by Kane and Scher (1969). These include:
+		1) The torso bends but does not twist.
+		2) At release, the spine is bent forward. Afterwards, the spine is
+		   first bent to one side, the backward, then to the other side,
+		   and finally forwards again. At the end of this "oscillation,"
+		   the cat has turned over.
+		3) The backwards bend that the cat experiences during its turning
+		   maneuver is more pronounced that its initial or final forward
+		   bends.
+	We use the general convention that body origins are at joint locations,
+    and thus mass centers are specified to be some distance away. Furthermore,
+	the model contains several "dummy" coordinate systems (i.e., massless
+	bodies) that are used to specify rotational relations between the anterior
+	and posterior segments of the cat.
+    */
 
 	// Numbers (scalable)
 	double bodyLength = 1; // m
