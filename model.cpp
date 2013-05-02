@@ -15,6 +15,8 @@ using OpenSim::DisplayGeometry;
 using OpenSim::PinJoint;
 using OpenSim::Model;
 using OpenSim::SpatialTransform;
+using OpenSim::TorqueActuator;
+using OpenSim::
 
 using SimTK::Inertia;
 using SimTK::Pi;
@@ -69,7 +71,7 @@ int main()
     Body * anteriorBody = new Body();
 	anteriorBody->setName("anteriorBody");
 	anteriorBody->setMass(mass);
-	anteriorBody->setMassCenter(Vec3(0.5 * bodyLength, 0.0, 0.0));  // why did you have 'bodyDiam' here?
+	anteriorBody->setMassCenter(Vec3(0.5 * bodyLength, 0.0, 0.0));
 	anteriorBody->setInertia(inertia);
 
 	// Posterior half of cat.
@@ -247,6 +249,23 @@ int main()
 	cat.addBody(posteriorBody);
 
     cat.print("feliscatus.osim");
+
+	// ---- Actuators.
+	TorqueActuator * testActuator = new TorqueActuator("anteriorBody", "posteriorBody");
+	testActuator->setTorqueIsGlobal(false);
+	testActuator->setAxis(Vec3(1.0, 0.0, 0.0));
+	double optimalForce = 250.0;
+	testActuator->setOptimalForce(optimalForce);
+
+	// ---- Controllers.
+	// "meat" is in computeControls()
+	// pass actuators to controller in main()
+	// get actuators in computeControls()
+	// get coordinates to control from model & throw gains on top of the errors
+	// get desired acceleration
+	// convert desired acceleration to force with mass (matrix)
+
+
 
     // Memory management.
 	// Doing this deletion ourselves causes a segfault.
