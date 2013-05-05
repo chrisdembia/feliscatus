@@ -16,7 +16,6 @@ using OpenSim::PinJoint;
 using OpenSim::Model;
 using OpenSim::SpatialTransform;
 using OpenSim::TorqueActuator;
-using OpenSim::
 
 using SimTK::Inertia;
 using SimTK::Pi;
@@ -52,9 +51,12 @@ int main()
 	double bodyLength = 1; // m
 	double bodyDiam = 1; // m
 	double mass = 1; // kg
-	double Ixx = 1 + mass*(bodyLength/2.0)*(bodyLength/2.0); // kg-m^2, shifted because of displaced joint
-	double Iyy = 1; // kg-m^2
-	double Izz = 1; // kg-m^2
+    double I = 1; //
+    double JIratio = 0.25;
+    double J = JIratio * I; // see Kane and Scher (1969).
+	double Ixx = I + mass*(bodyLength/2.0)*(bodyLength/2.0); // kg-m^2, shifted because of displaced joint TODO might be unneccessary? I is about COM.
+	double Iyy = J; // kg-m^2
+	double Izz = J; // kg-m^2
 	double Ixy = 0; // kg-m^2
 	double Ixz = 0; // kg-m^2
 	double Iyz = 0; // kg-m^2
@@ -87,28 +89,32 @@ int main()
 	// to shift the body's moment of inertia (with parallel-axis theorem, see
 	// above) and the location of the joint relative to the mass center?
 
-	// MASSLESS bodies (i.e., defining coordinate frames for rotation)
+    // MASSLESS bodies (i.e., defining coordinate frames for rotation). We have
+    // attempted to be as faithful to Kane and Scher (1969) as possible. See
+    // their paper to understand the notation used.
 
-	// Frame in which the X-axis points along ray K from Kane and Scher (1969).
-	// K lies in the XY plane of the coordinate frame attached to the posterior
-	// half of the cat.
+	// Frame in which the X-axis points along ray K.
+    // K lies in the X-Y (A1-A2) plane of the coordinate frame attached to the
+    // anterior half of the cat.
 	Body * K = new Body();
 	posteriorBody->setName("K");
 	posteriorBody->setMass(0.0);
 	posteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
 
-	// Frame with the following axes (Kane and Scher, 1969):
-	//		X = X-axis from coordinate frame attached to the anterior half of the cat
-	//		Y = normal to X and lying in the plane defined by X and ray K
-	//		Z = mutually perpendicular to X and Y 
-	Body * B = new Body();
-	posteriorBody->setName("B");
+	// Frame with the following axes:
+    //		X: X-axis of coordinate frame attached to the posterior body.
+	//		Y: normal to X and lying in the plane defined by X and ray K
+	//		Z: mutually perpendicular to X and Y
+    // The posteriorBody is then rotated about frame P's X axis.
+    // [CD] The last page of the paper I think identifies this frame as P.
+	Body * P = new Body();
+	posteriorBody->setName("P");
 	posteriorBody->setMass(0.0);
 	posteriorBody->setMassCenter(Vec3(0.0, 0.0, 0.0));
 
-	// Frame in which X-axis points along ray N from Kane and Scher (1969). N
-	// is mutually perpendicular to the X-axes of the coordinate frames attached
-	// to the anterior and posterior halves of the cat.
+    // Frame in which X-axis points along ray N. N is mutually perpendicular to
+    // the X-axes of the coordinate frames attached to the anterior and
+    // posterior halves of the cat (A1 and B1, respectively).
 	Body * N = new Body();
 	posteriorBody->setName("N");
 	posteriorBody->setMass(0.0);
@@ -119,14 +125,14 @@ int main()
     // --- Joint between the ground and the anterior body.
 
 	// -- This joint is a CustomJoint, which requires a SpatialTransform.
-	// This construction goes smoothly seemingly only if we define the SpatialTransform
-	// first, and pass it to the CustomJoint as a constructor argument.
-	// This was gleaned by reading the source code, particularly
-	// CustomJoint::constructCoordinates().
+    // This construction goes smoothly seemingly only if we define the
+    // SpatialTransform first, and pass it to the CustomJoint as a constructor
+    // argument.  This was gleaned by reading the source code, particularly
+    // CustomJoint::constructCoordinates().
 	// We are following the example of a CustomJoint given by gait2354.
 	SpatialTransform groundAnteriorST;
 
-	// Rotation. ZXY.
+	// Rotation, using the body-fixed/Euler ZXY convention.
 	groundAnteriorST.updTransformAxis(0).setCoordinateNames(
 		Array<string>("anterior_flip", 1));
 	groundAnteriorST.updTransformAxis(0).setAxis(Vec3(0, 0, 1));
@@ -160,7 +166,8 @@ int main()
     Vec3 orientGAInAnterior(0);
     CustomJoint * groundAnterior = new CustomJoint("ground_anterior",
             ground, locGAInGround, orientGAInGround,
-            *anteriorBody, locGAInAnterior, orientGAInAnterior, groundAnteriorST);
+            *anteriorBody, locGAInAnterior, orientGAInAnterior,
+            groundAnteriorST);
 
     // Set properties of the joint's coordinates.
     CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
@@ -202,15 +209,15 @@ int main()
 	// -- Joint between the anterior and posterior bodies.
 	// TODO there is a u-joint class
 	Vec3 locAPInAnterior(0);
-    Vec3 orientAPInAnterior(0, 0, 0); // TODO use Pi, or just place geom elsewhere?
+    Vec3 orientAPInAnterior(0, 0, 0);
     Vec3 locAPInPosterior(0);
     Vec3 orientAPInPosterior(0);
     PinJoint * anteriorPosterior = new PinJoint("anterior_posterior",
             *anteriorBody, locAPInAnterior, orientAPInAnterior,
             *posteriorBody, locAPInPosterior, orientAPInPosterior);
     // Joint coordinates.
-	// TODO would prefer that these rotations could be "body-fixed".
-    CoordinateSet & anteriorPosteriorCS = anteriorPosterior->upd_CoordinateSet();
+    CoordinateSet & anteriorPosteriorCS =
+        anteriorPosterior->upd_CoordinateSet();
 	anteriorPosteriorCS[0].setName("waist_hunch");
 	double anteriorPosteriorCS0range[2] = {-Pi, Pi};
 	anteriorPosteriorCS[0].setRange(anteriorPosteriorCS0range);
@@ -238,10 +245,8 @@ int main()
     posteriorDisplay->setTransform(Transform(rot));
     posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
             posteriorDisplay);
-    posteriorBody->updDisplayer()->setShowAxes(true);   
+    posteriorBody->updDisplayer()->setShowAxes(true);
 
-    
-    
 
     // ---- Coordinate limits.
     // TODO 
@@ -253,11 +258,13 @@ int main()
     cat.print("feliscatus.osim");
 
 	// ---- Actuators.
+    /** TODO commenting out until joint is figured out.
 	TorqueActuator * testActuator = new TorqueActuator("anteriorBody", "posteriorBody");
 	testActuator->setTorqueIsGlobal(false);
 	testActuator->setAxis(Vec3(1.0, 0.0, 0.0));
 	double optimalForce = 250.0;
 	testActuator->setOptimalForce(optimalForce);
+    */
 
 	// ---- Controllers.
 	// "meat" is in computeControls()
