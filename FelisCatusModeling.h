@@ -12,9 +12,11 @@ using std::vector;
 
 using OpenSim::Array;
 using OpenSim::Body;
+using OpenSim::CoordinateCouplerConstraint;
 using OpenSim::CoordinateSet;
 using OpenSim::CustomJoint;
 using OpenSim::DisplayGeometry;
+using OpenSim::LinearFunction;
 using OpenSim::PinJoint;
 using OpenSim::Model;
 using OpenSim::SpatialTransform;
@@ -320,12 +322,14 @@ private:
     }
 
     /**
-     * The topology with this joint is:
-     *              A
-     *            /
-     * ground -> Q 
-     *            \
-     *              B
+     * The topology (?) with this joint is:
+     * 
+     *                   Aintermed -> anteriorBody
+     *                 /
+     * ground -> frameQ 
+     *                 \
+     *                   Bintermed -> posteriorBody
+     * 
      * */
     void addKaneScherFig3Joint()
     {
@@ -347,16 +351,20 @@ private:
         // TODO need some description here.
         // Y rotation to place the joint axis in the ground's X-Y plane.
         Vec3 orientGQInGround(0, 0.5 * Pi, 0);
+        // TODO X rotation to offset the fixed location of the joint axis in space,
+        // TODO so that it is inclined from the ground X axis, toward the ground Y axis.
+        // TODO Vec3 orientGQInGround(0.25 * Pi, 0.5 * Pi, 0);
         Vec3 locGQInFrameQ(0);
-        // Undo previous rotation on other side of joint so that cat lies in
+        // Y rotation to undo previous rotation on other side of joint so that cat lies in
         // X-Y plane.
-        Vec3 orientGQInFrameQ(0, -0.5 * Pi, 0);
+        // Z rotation to set the default configuration of the cat to be upside down.
+        Vec3 orientGQInFrameQ(0, -0.5 * Pi, Pi);
         PinJoint * groundFrameQ = new PinJoint("ground_frameQ",
                 ground, locGQInGround, orientGQInGround,
                 *frameQ, locGQInFrameQ, orientGQInFrameQ);
         CoordinateSet & groundFrameQCS = groundFrameQ->upd_CoordinateSet();
         groundFrameQCS[0].setName("kane_psi");
-        double groundFrameQCS0range[2] = {-Pi, Pi};
+        double groundFrameQCS0range[2] = {-1.5 * Pi, 1.5 * Pi};
         groundFrameQCS[0].setRange(groundFrameQCS0range);
         groundFrameQCS[0].setDefaultValue(0.0);
         groundFrameQCS[0].setDefaultLocked(false);
@@ -404,6 +412,7 @@ private:
                 *anteriorBody, locAIAinAnterior, orientAIAinAnterior);
         CoordinateSet & AintermedAnteriorCS =
             AintermedAnterior->upd_CoordinateSet();
+        // "integ" because this coord is the integral of the speed u.
         AintermedAnteriorCS[0].setName("kane_u_integ");
         double AintermedAnteriorCS0range[2] = {-2 * Pi, 2 * Pi};
         AintermedAnteriorCS[0].setRange(AintermedAnteriorCS0range);
@@ -426,12 +435,41 @@ private:
         BintermedPosteriorCS[0].setDefaultValue(0.0);
         BintermedPosteriorCS[0].setDefaultLocked(false);
 
+        // --- Constraints.
+        // -- Constraint between intermediate frames.
+        CoordinateCouplerConstraint * intermedConstr = 
+            new CoordinateCouplerConstraint();
+        intermedConstr->setIndependentCoordinateNames(Array<string>("kane_gammaA", 1));
+        intermedConstr->setDependentCoordinateName("kane_gammaB");
+        Array<double> intermedConstrFcnCoeff;
+        intermedConstrFcnCoeff.append(1);
+        intermedConstrFcnCoeff.append(-1);
+        LinearFunction * intermedConstrFcn = 
+            new LinearFunction(intermedConstrFcnCoeff);
+        intermedConstr->setFunction(intermedConstrFcn);
+        
+        cat.addConstraint(intermedConstr);
+
+        // -- Constraint between kane_u_integ and kane_v_integ.
+
+        // --- Display geometry for the time being to help see relation to Fig 3.
+        // This geometry represents the plane/frame Q.
+        DisplayGeometry * frameQDisplay = new DisplayGeometry("box.vtp");
+        frameQDisplay->setOpacity(0.2);
+        frameQDisplay->setScaleFactors(Vec3(2, 2, 0.01));
+
+        frameQ->updDisplayer()->updGeometrySet().adoptAndAppend(frameQDisplay);
+        frameQ->updDisplayer()->setShowAxes(true);
+
+        // -- Add bodies.
         cat.addBody(frameQ);
         cat.addBody(Aintermed);
         cat.addBody(Bintermed);
+
+
         
         // TODO get rid of intermediates using GimbalJoint.
-        // TODO constraint between intermediate frames.
+        
 
     }
 
@@ -465,8 +503,9 @@ private:
         // get desired acceleration
         // convert desired acceleration to force with mass (matrix)
     }
-
-    /** Adds display geometry to anteriorBody and posteriorBody.
+    
+    /** 
+     * Adds display geometry to anteriorBody and posteriorBody.
      * */
     void addDisplayGeometry()
     {
