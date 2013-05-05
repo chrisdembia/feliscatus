@@ -121,11 +121,6 @@ public:
         addActuators();
         addControllers();
 
-        // -- Add bodies to model.
-        // This must be done after the joints for these bodies are added.
-        cat.addBody(anteriorBody);
-        cat.addBody(posteriorBody);
-
         cat.print(fileName);
     }
 
@@ -276,6 +271,11 @@ private:
         anteriorPosteriorCS[0].setRange(anteriorPosteriorCS0range);
         anteriorPosteriorCS[0].setDefaultValue(0.0);
         anteriorPosteriorCS[0].setDefaultLocked(false);
+
+        // -- Add bodies to model.
+        // This must be done after the joints for these bodies are added.
+        cat.addBody(anteriorBody);
+        cat.addBody(posteriorBody);
     }
 
     /**
@@ -319,6 +319,11 @@ private:
         // perpendicular to the X-axes of the coordinate frames attached to the
         // anterior and posterior halves of the cat (A1 and B1, respectively).
         Body * N = newMasslessBody("N");
+
+        // -- Add bodies to model.
+        // This must be done after the joints for these bodies are added.
+        cat.addBody(anteriorBody);
+        cat.addBody(posteriorBody);
     }
 
     /**
@@ -351,13 +356,16 @@ private:
         // TODO need some description here.
         // Y rotation to place the joint axis in the ground's X-Y plane.
         Vec3 orientGQInGround(0, 0.5 * Pi, 0);
-        // TODO X rotation to offset the fixed location of the joint axis in space,
-        // TODO so that it is inclined from the ground X axis, toward the ground Y axis.
+        // TODO X rotation to offset the fixed location of the joint axis in
+        // space,
+        // TODO so that it is inclined from the ground X axis, toward the
+        // ground Y axis.
         // TODO Vec3 orientGQInGround(0.25 * Pi, 0.5 * Pi, 0);
         Vec3 locGQInFrameQ(0);
-        // Y rotation to undo previous rotation on other side of joint so that cat lies in
-        // X-Y plane.
-        // Z rotation to set the default configuration of the cat to be upside down.
+        // Y rotation to undo previous rotation on other side of joint so that
+        // cat lies in X-Y plane.
+        // Z rotation to set the default configuration of the cat to be upside
+        // down.
         Vec3 orientGQInFrameQ(0, -0.5 * Pi, Pi);
         PinJoint * groundFrameQ = new PinJoint("ground_frameQ",
                 ground, locGQInGround, orientGQInGround,
@@ -435,22 +443,6 @@ private:
         BintermedPosteriorCS[0].setDefaultValue(0.0);
         BintermedPosteriorCS[0].setDefaultLocked(false);
 
-        // --- Constraints.
-        // -- Constraint between intermediate frames.
-        CoordinateCouplerConstraint * intermedConstr = 
-            new CoordinateCouplerConstraint();
-        intermedConstr->setIndependentCoordinateNames(Array<string>("kane_gammaA", 1));
-        intermedConstr->setDependentCoordinateName("kane_gammaB");
-        Array<double> intermedConstrFcnCoeff;
-        intermedConstrFcnCoeff.append(1);
-        intermedConstrFcnCoeff.append(-1);
-        LinearFunction * intermedConstrFcn = 
-            new LinearFunction(intermedConstrFcnCoeff);
-        intermedConstr->setFunction(intermedConstrFcn);
-        
-        cat.addConstraint(intermedConstr);
-
-        // -- Constraint between kane_u_integ and kane_v_integ.
 
         // --- Display geometry for the time being to help see relation to Fig 3.
         // This geometry represents the plane/frame Q.
@@ -461,12 +453,44 @@ private:
         frameQ->updDisplayer()->updGeometrySet().adoptAndAppend(frameQDisplay);
         frameQ->updDisplayer()->setShowAxes(true);
 
-        // -- Add bodies.
+        // --- Add bodies.
+        // Need to do this before the constraints.
         cat.addBody(frameQ);
         cat.addBody(Aintermed);
         cat.addBody(Bintermed);
+        cat.addBody(anteriorBody);
+        cat.addBody(posteriorBody);
 
+        // --- Constraints.
+        // -- Constraint between intermediate frames.
+        CoordinateCouplerConstraint * intermedConstr = 
+            new CoordinateCouplerConstraint();
+        intermedConstr->setName("intermed");
+        intermedConstr->setIndependentCoordinateNames(
+                Array<string>("kane_gammaA", 1));
+        intermedConstr->setDependentCoordinateName("kane_gammaB");
+        Array<double> intermedConstrFcnCoeff;
+        // TODO I don't understand hw these coefficients work and
+        // I think the documentation is insufficient.
+        intermedConstrFcnCoeff.append(-1);
+        intermedConstr->setFunction(new LinearFunction(intermedConstrFcnCoeff));
+        
+        // -- Constraint between kane_u_integ and kane_v_integ.
+        CoordinateCouplerConstraint * twistConstr = 
+            new CoordinateCouplerConstraint();
+        twistConstr->setName("twist");
+        twistConstr->setIndependentCoordinateNames(
+                Array<string>("kane_u_integ", 1));
+        twistConstr->setDependentCoordinateName("kane_v_integ");
+        Array<double> twistConstrFcnCoeff;
+        // TODO I don't understand hw these coefficients work and
+        // I think the documentation is insufficient.
+        twistConstrFcnCoeff.append(1);
+        twistConstr->setFunction(new LinearFunction(twistConstrFcnCoeff));
 
+        // -- Add constraints to model.
+        cat.addConstraint(intermedConstr);
+        cat.addConstraint(twistConstr);
         
         // TODO get rid of intermediates using GimbalJoint.
         
