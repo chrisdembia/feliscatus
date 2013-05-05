@@ -74,30 +74,39 @@ SET(OSIM_LIBRARIES
 
 # The below is specific to this project.
 
-SET(MODEL_EXEC_NAME model)
-ADD_EXECUTABLE(${MODEL_EXEC_NAME} model.cpp)
-TARGET_LINK_LIBRARIES(${MODEL_EXEC_NAME} ${OSIM_LIBRARIES})
+# This macro allows for swift creation of different model-creating executables.
+MACRO(ADD_MODEL_EXECUTABLE EXEC_NAME)
+    ADD_EXECUTABLE(${EXEC_NAME} ${EXEC_NAME}.cpp FelisCatusModeling.h)
+    TARGET_LINK_LIBRARIES(${EXEC_NAME} ${OSIM_LIBRARIES})
+
+    # Copy geometry files to the build directory, so OpenSim can find the files
+    # specified in the model file.
+    ADD_CUSTOM_COMMAND(TARGET ${EXEC_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/Geometry
+        $<TARGET_FILE_DIR:${EXEC_NAME}>)
+
+    # Also copy geometry files to build top-level directory, because this is
+    # where the .osim is placed if executable is run directly from Visual
+    # Studio.
+    # TODO this does NOT need to be done for EACH model executable.
+    ADD_CUSTOM_COMMAND(TARGET ${EXEC_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/Geometry
+        ${CMAKE_BINARY_DIR})
+endmacro()
+
+# Call the macro above for creation of the model with the Dembia, Sketch joint.
+ADD_MODEL_EXECUTABLE(model_dembiasketch)
 
 SET(SIMULATE_EXEC_NAME simulate)
 ADD_EXECUTABLE(${SIMULATE_EXEC_NAME} simulate.cpp)
 TARGET_LINK_LIBRARIES(${SIMULATE_EXEC_NAME} ${OSIM_LIBRARIES})
-
-# Copy geometry files to the build directory, so OpenSim can find the files
-# specified in the model file.
-add_custom_command(TARGET ${MODEL_EXEC_NAME}
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/Geometry
-    $<TARGET_FILE_DIR:${MODEL_EXEC_NAME}>)
-
-# Also copy to build top-level directory, because this is where the .osim is placed
-# if executable is run directly from Visual Studio.
-add_custom_command(TARGET ${MODEL_EXEC_NAME}
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/Geometry
-    ${CMAKE_BINARY_DIR})
 	
+# ----- Old script stuff for reference.
+
 # Copy Geometry files to the OpenSim Geometry folder, so that OpenSim can find
 # the geometry files specified in the model file. This is only necessary if we
 # plan to move the model file around, and not just use it from the build

@@ -22,10 +22,20 @@ using SimTK::Visualizer;
 /**
  * Simulates a cat model using the Simbody visualizer.
  * */
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc != 2)
+    {
+        cout << "The single input to this exectuable is the name "
+            "of the model file to simulate. For example: "
+            "$ simulate feliscatus.osim" << endl;
+        return EXIT_SUCCESS;
+    }
+
+    char * modelFileName = argv[1];
+
     // Open the model.
-    Model cat("feliscatus.osim");
+    Model cat(modelFileName);
     cat.setUseVisualizer(true);
 
     // --- Prepare for integration.
