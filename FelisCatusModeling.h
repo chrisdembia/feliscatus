@@ -51,13 +51,19 @@ class FelisCatusModeling
 public:
 
     /** The types of spinal joints that we are exploring for the model.
-     * The DembiaSketch joint is informed by how, in OpenSim human models, the
+     * - DembiaSketch: informed by how, in OpenSim human models, the
      * pelvis is connected to the ground via a FreeJoint.
+     *
+     * - KaneScherFig2: from Kane and Scher (1969) with the topology based off
+     *   Figure 2 of their paper (using frames N, A, and K).
+     * - KaneScherFig3: from Kane and Scher (1969) with the topology based off
+     *   Figure 3 of their paper.
      * */
     enum SpinalJointType
     {
         DembiaSketch,
-        KaneScher
+        KaneScherFig2,
+        KaneScherFig3
     };
 
     /**
@@ -93,13 +99,17 @@ public:
         // The order of these calls matters, in general.
         addBodies();
         addDisplayGeometry();
+        // Only one of the Joint functions should ever be called.
         switch (jointType)
         {
             case DembiaSketch:
                 addDembiaSketchJoint();
                 break;
-            case KaneScher:
-                addKaneScherJoint();
+            case KaneScherFig2:
+                addKaneScherFig2Joint();
+                break;
+            case KaneScherFig3:
+                addKaneScherFig3Joint();
                 break;
             default:
                 cout << "SpinalJointType not supported." << endl;
@@ -142,14 +152,14 @@ private:
         anteriorBody = new Body();
         anteriorBody->setName("anteriorBody");
         anteriorBody->setMass(segmentalMass);
-        anteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0.0, 0.0));
+        anteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0.0, 0.0));
         anteriorBody->setInertia(segmentalInertia);
 
         // Posterior half of cat.
         posteriorBody = new Body();
         posteriorBody->setName("posteriorBody");
         posteriorBody->setMass(segmentalMass);
-        posteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0.0, 0.0));
+        posteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0.0, 0.0));
         posteriorBody->setInertia(segmentalInertia);
 
         // TODO change direction of mass center, and correspondingly, the g
@@ -260,13 +270,31 @@ private:
         CoordinateSet & anteriorPosteriorCS =
             anteriorPosterior->upd_CoordinateSet();
         anteriorPosteriorCS[0].setName("waist_hunch");
-        double anteriorPosteriorCS0range[2] = {-Pi, Pi};
+        double anteriorPosteriorCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
         anteriorPosteriorCS[0].setRange(anteriorPosteriorCS0range);
         anteriorPosteriorCS[0].setDefaultValue(0.0);
         anteriorPosteriorCS[0].setDefaultLocked(false);
     }
 
-    void addKaneScherJoint()
+    /**
+     * For help with creating massless Body's (frames). If we weren't simply
+     * building a model, creating a pointer like this wouldn't be a good
+     * idea.
+     * */
+    Body * newMasslessBody(string name)
+    {
+        Body * massless = new Body();
+        massless->setName(name);
+        massless->setMass(0.0);
+        massless->setMassCenter(Vec3(0.0, 0.0, 0.0));
+        massless->setInertia(zeroInertia);
+        return massless;
+    }
+
+    /**
+     * TODO
+     * */
+    void addKaneScherFig2Joint()
     {
         // MASSLESS bodies (i.e., defining coordinate frames for rotation). We
         // have attempted to be as faithful to Kane and Scher (1969) as
@@ -275,11 +303,7 @@ private:
         // Frame in which the X-axis points along ray K.  K lies in the X-Y
         // (A1-A2) plane of the coordinate frame attached to the anterior half
         // of the cat.
-        Body * K = new Body();
-        K->setName("K");
-        K->setMass(0.0);
-        K->setMassCenter(Vec3(0.0, 0.0, 0.0));
-        K->setInertia(zeroInertia);
+        Body * K = newMasslessBody("K");
 
         // Frame with the following axes:
         //		X: X-axis of coordinate frame attached to the posterior body.
@@ -287,20 +311,128 @@ private:
         //		Z: mutually perpendicular to X and Y
         // The posteriorBody is then rotated about frame P's X axis.
         // [CD] The last page of the paper I think identifies this frame as P.
-        Body * P = new Body();
-        P->setName("P");
-        P->setMass(0.0);
-        P->setMassCenter(Vec3(0.0, 0.0, 0.0));
-        K->setInertia(zeroInertia);
+        Body * P = newMasslessBody("P");
 
         // Frame in which X-axis points along ray N. N is mutually
         // perpendicular to the X-axes of the coordinate frames attached to the
         // anterior and posterior halves of the cat (A1 and B1, respectively).
-        Body * N = new Body();
-        N->setName("N");
-        N->setMass(0.0);
-        N->setMassCenter(Vec3(0.0, 0.0, 0.0));
-        K->setInertia(zeroInertia);
+        Body * N = newMasslessBody("N");
+    }
+
+    /**
+     * The topology with this joint is:
+     *              A
+     *            /
+     * ground -> Q 
+     *            \
+     *              B
+     * */
+    void addKaneScherFig3Joint()
+    {
+        Body & ground = cat.getGroundBody();
+
+        // I'm calling massless bodies "frames". Here are all the ones I'm
+        // using:
+        // The frame containing A1 and B1.
+        Body * frameQ = newMasslessBody("Q");
+        // Frame rotated from Q about N by -gamma/2, to which anteriorBody is
+        // attached.
+        Body * Aintermed = newMasslessBody("Aintermed");
+        // Frame rotated from Q about N by gamma/2, to which posteriorBody is
+        // attached.
+        Body * Bintermed = newMasslessBody("Bintermed");
+
+        // -- Connect Q to ground.
+        Vec3 locGQInGround(0);
+        // TODO need some description here.
+        // Y rotation to place the joint axis in the ground's X-Y plane.
+        Vec3 orientGQInGround(0, 0.5 * Pi, 0);
+        Vec3 locGQInFrameQ(0);
+        // Undo previous rotation on other side of joint so that cat lies in
+        // X-Y plane.
+        Vec3 orientGQInFrameQ(0, -0.5 * Pi, 0);
+        PinJoint * groundFrameQ = new PinJoint("ground_frameQ",
+                ground, locGQInGround, orientGQInGround,
+                *frameQ, locGQInFrameQ, orientGQInFrameQ);
+        CoordinateSet & groundFrameQCS = groundFrameQ->upd_CoordinateSet();
+        groundFrameQCS[0].setName("kane_psi");
+        double groundFrameQCS0range[2] = {-Pi, Pi};
+        groundFrameQCS[0].setRange(groundFrameQCS0range);
+        groundFrameQCS[0].setDefaultValue(0.0);
+        groundFrameQCS[0].setDefaultLocked(false);
+        // TODO Change the above to a CustomJoint soon.
+
+        // Connect Aintermed(iate) to Q.
+        Vec3 locQAIinFrameQ(0);
+        Vec3 orientQAIinFrameQ(0, 0, 0);
+        Vec3 locQAIinAintermed(0);
+        Vec3 orientQAIinAintermed(0, 0, 0);
+        PinJoint * frameQAintermed = new PinJoint("frameQ_Aintermed",
+                *frameQ, locQAIinFrameQ, orientQAIinFrameQ,
+                *Aintermed, locQAIinAintermed, orientQAIinAintermed);
+        CoordinateSet & frameQAintermedCS =
+            frameQAintermed->upd_CoordinateSet();
+        frameQAintermedCS[0].setName("kane_gammaA");
+        double frameQAintermedCS0range[2] = {-0.5 * Pi, 0};
+        frameQAintermedCS[0].setRange(frameQAintermedCS0range);
+        frameQAintermedCS[0].setDefaultValue(0.0);
+        frameQAintermedCS[0].setDefaultLocked(false);
+
+        // Connect Bintermed(iate) to Q.
+        Vec3 locQBIinFrameQ(0);
+        Vec3 orientQBIinFrameQ(0, 0, 0);
+        Vec3 locQBIinBintermed(0);
+        Vec3 orientQBIinBintermed(0, 0, 0);
+        PinJoint * frameQBintermed = new PinJoint("frameQ_Bintermed",
+                *frameQ, locQBIinFrameQ, orientQBIinFrameQ,
+                *Bintermed, locQBIinBintermed, orientQBIinBintermed);
+        CoordinateSet & frameQBintermedCS =
+            frameQBintermed->upd_CoordinateSet();
+        frameQBintermedCS[0].setName("kane_gammaB");
+        double frameQBintermedCS0range[2] = {0, 0.5 * Pi};
+        frameQBintermedCS[0].setRange(frameQBintermedCS0range);
+        frameQBintermedCS[0].setDefaultValue(0.0);
+        frameQBintermedCS[0].setDefaultLocked(false);
+
+        // Connect Aintermed to anteriorBody.
+        Vec3 locAIAinAintermed(0);
+        Vec3 orientAIAinAintermed(0, 0.5 * Pi, 0);
+        Vec3 locAIAinAnterior(0);
+        Vec3 orientAIAinAnterior(0, -0.5 * Pi, 0);
+        PinJoint * AintermedAnterior = new PinJoint("Aintermed_anterior",
+                *Aintermed, locAIAinAintermed, orientAIAinAintermed,
+                *anteriorBody, locAIAinAnterior, orientAIAinAnterior);
+        CoordinateSet & AintermedAnteriorCS =
+            AintermedAnterior->upd_CoordinateSet();
+        AintermedAnteriorCS[0].setName("kane_u_integ");
+        double AintermedAnteriorCS0range[2] = {-2 * Pi, 2 * Pi};
+        AintermedAnteriorCS[0].setRange(AintermedAnteriorCS0range);
+        AintermedAnteriorCS[0].setDefaultValue(0.0);
+        AintermedAnteriorCS[0].setDefaultLocked(false);
+
+        // Connect Bintermed to posteriorBody.
+        Vec3 locBIBinBintermed(0);
+        Vec3 orientBIBinBintermed(0, 0.5 * Pi, 0);
+        Vec3 locBIBinPosterior(0);
+        Vec3 orientBIBinPosterior(0, -0.5 * Pi, 0);
+        PinJoint * BintermedPosterior = new PinJoint("Bintermed_posterior",
+                *Bintermed, locBIBinBintermed, orientBIBinBintermed,
+                *posteriorBody, locBIBinPosterior, orientBIBinPosterior);
+        CoordinateSet & BintermedPosteriorCS =
+            BintermedPosterior->upd_CoordinateSet();
+        BintermedPosteriorCS[0].setName("kane_v_integ");
+        double BintermedPosteriorCS0range[2] = {-2 * Pi, 2 * Pi};
+        BintermedPosteriorCS[0].setRange(BintermedPosteriorCS0range);
+        BintermedPosteriorCS[0].setDefaultValue(0.0);
+        BintermedPosteriorCS[0].setDefaultLocked(false);
+
+        cat.addBody(frameQ);
+        cat.addBody(Aintermed);
+        cat.addBody(Bintermed);
+        
+        // TODO get rid of intermediates using GimbalJoint.
+        // TODO constraint between intermediate frames.
+
     }
 
     void addCoordinateLimitForces()
@@ -340,27 +472,32 @@ private:
     {
         Body & ground = cat.getGroundBody();
 
+        // Ground.
         ground.addDisplayGeometry("treadmill.vtp");
 
+        // Anterior body.
         DisplayGeometry * anteriorDisplay = 
             new DisplayGeometry(
                     "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
         anteriorDisplay->setOpacity(0.5);
         anteriorDisplay->setColor(Vec3(0.5, 0.5, 0.5));
+        Rotation rot;
+        rot.setRotationFromAngleAboutY(Pi);
+        anteriorDisplay->setTransform(Transform(rot));
+
         anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
                 anteriorDisplay);
         anteriorBody->updDisplayer()->setShowAxes(true);
 		anteriorBody->updDisplayer()->setScaleFactors(
                 Vec3(segmentalLength, segmentalDiam, segmentalDiam));
 
+        // Posterior body.
         DisplayGeometry * posteriorDisplay = 
             new DisplayGeometry(
                     "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
         posteriorDisplay->setOpacity(0.5);
         posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
-        Rotation rot;
-        rot.setRotationFromAngleAboutY(Pi); // TODO move this to the anterior body.
-        posteriorDisplay->setTransform(Transform(rot));
+
         posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
                 posteriorDisplay);
         posteriorBody->updDisplayer()->setShowAxes(true);

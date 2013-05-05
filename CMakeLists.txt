@@ -100,6 +100,10 @@ endmacro()
 
 # Call the macro above for creation of the model with the Dembia, Sketch joint.
 ADD_MODEL_EXECUTABLE(model_dembiasketch)
+# ...and now for the Kane, Scher spinal joint based off their Figure 2.
+ADD_MODEL_EXECUTABLE(model_kanescherfig2)
+# ...and now for the Kane, Scher spinal joint based off their Figure 3.
+ADD_MODEL_EXECUTABLE(model_kanescherfig3)
 
 SET(SIMULATE_EXEC_NAME simulate)
 ADD_EXECUTABLE(${SIMULATE_EXEC_NAME} simulate.cpp)
