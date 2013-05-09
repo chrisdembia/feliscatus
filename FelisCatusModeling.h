@@ -52,6 +52,7 @@ public:
         cat = Model();
         cat.setName(modelName);
         // TODO cat.setGravity(Vec3(0, -9.81, 0));
+        cat.setGravity(Vec3(0, 0, 0));
 
         // Constants/parameters.
         segmentalLength = 1; // m
@@ -152,9 +153,7 @@ protected:
         // TODO 
     }
 
-    void addActuators()
-    {
-        // ---- Actuators.
+    // ---- Actuators.
         /** TODO commenting out until joint is figured out.
           TorqueActuator * testActuator = new TorqueActuator("anteriorBody",
           "posteriorBody");
@@ -162,8 +161,8 @@ protected:
           testActuator->setAxis(Vec3(1.0, 0.0, 0.0));
           double optimalForce = 250.0;
           testActuator->setOptimalForce(optimalForce);
-          */
-    }
+    */
+    virtual void addActuators() { };
 
     void addControllers()
     {

@@ -1,6 +1,8 @@
 
 #include "FelisCatusModeling.h"
 
+using OpenSim::PointToPointSpring;
+
 /**
  * Creates an OpenSim model of a cat, sufficient for exploring the cat's
  * righting reflex.
@@ -23,9 +25,10 @@
  * bodies) that are used to specify rotational relations between the anterior
  * and posterior segments of the cat.
  * */
-class KaneScherFig2Modeling : public FelisCatusModeling
+class KaneScherFig3Modeling : public FelisCatusModeling
 {
     void addJoints();
+    void addActuators();
 };
 
 /** Creates a FelisCatus model with a spinal joint defined by Kane and Scher,
@@ -33,7 +36,7 @@ class KaneScherFig2Modeling : public FelisCatusModeling
  * */
 int main(int argc, char *argv[])
 {
-    KaneScherFig2Modeling m;
+    KaneScherFig3Modeling m;
     m.makeModel("Leland_kanescherfig3", "feliscatus_kanescherfig3.osim");
 
     return EXIT_SUCCESS;
@@ -49,7 +52,7 @@ int main(int argc, char *argv[])
  *                   Bintermed -> posteriorBody
  * 
  * */
-void KaneScherFig2Modeling::addJoints()
+void KaneScherFig3Modeling::addJoints()
 {
     Body & ground = cat.getGroundBody();
 
@@ -206,6 +209,21 @@ void KaneScherFig2Modeling::addJoints()
     cat.addConstraint(twistConstr);
 
     // TODO get rid of intermediates using GimbalJoint.
+    
+}
 
-
+void KaneScherFig3Modeling::addActuators()
+{
+    // TODO change this to addForces()?
+    string body1Name = "anteriorBody";
+    Vec3 point1(-0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
+    string body2Name = "posteriorBody";
+    Vec3 point2(0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
+    double stiffness = 1.0;
+    double restlength = 0.75 * segmentalLength;
+    PointToPointSpring * act1 = new PointToPointSpring(body1Name, point1,
+                                                       body2Name, point2,
+                                                       stiffness, restlength);
+    act1->setName("test_spin");
+    cat.addForce(act1);
 }
