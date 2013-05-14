@@ -1,6 +1,9 @@
 
 #include "FelisCatusModeling.h"
 
+using SimTK::convertDegreesToRadians;
+using OpenSim::PointToPointSpring;
+
 /**
  * This model allows for the "salient features of motion" of a falling cat
  * first identified by Kane and Scher (1969). These include:
@@ -19,6 +22,7 @@
 class KaneScherFig2Modeling : public FelisCatusModeling
 {
     void addJoints();
+	void addActuators();
 };
 
 /** 
@@ -45,6 +49,11 @@ void KaneScherFig2Modeling::addJoints()
 	// NOTE: Massless bodies are simply coordinate frames for rotation. We
     // ----  have attempted to be as faithful to Kane and Scher (1969) as
     //       possible. See their paper to understand the notation used.
+
+	// BODY CONNECTIONS:  ground -> anterior -> K -> P -> B2 -> posterior
+	//
+	// JOINTS/COORDINATES:  custom (u_integ) -> pin (alpha) -> pin (theta) ->
+	//						pin (beta) -> pin (v_integ)
 
 	// Connecting the anterior body (A) to the ground via a custom joint (same
 	// as in 'model_dembiasketch'). Rotation is defined via ZXY Euler angles,
@@ -75,7 +84,7 @@ void KaneScherFig2Modeling::addJoints()
     Vec3 locGAInGround(0);
     Vec3 orientGAInGround(0);
     Vec3 locGAInAnterior(0);
-    Vec3 orientGAInAnterior(0);
+    Vec3 orientGAInAnterior(Pi, 0, 0);
 
     CustomJoint* groundAnterior = new CustomJoint("ground_anterior",
             ground, locGAInGround, orientGAInGround,
@@ -87,7 +96,7 @@ void KaneScherFig2Modeling::addJoints()
     double groundAnteriorCS0range[2] = {-Pi, Pi};
     groundAnteriorCS[0].setRange(groundAnteriorCS0range);
     groundAnteriorCS[0].setDefaultValue(0);
-    groundAnteriorCS[0].setDefaultLocked(false);
+    groundAnteriorCS[0].setDefaultLocked(true);
     // u_integ (sprawl)
     double groundAnteriorCS1range[2] = {-Pi, Pi};
     groundAnteriorCS[1].setRange(groundAnteriorCS1range);
@@ -97,7 +106,7 @@ void KaneScherFig2Modeling::addJoints()
     double groundAnteriorCS2range[2] = {-3 * Pi, 3 * Pi};
     groundAnteriorCS[2].setRange(groundAnteriorCS2range);
     groundAnteriorCS[2].setDefaultValue(0);
-    groundAnteriorCS[2].setDefaultLocked(false);
+    groundAnteriorCS[2].setDefaultLocked(true);
     // tx
     double groundAnteriorCS3range[2] = {-10, 10};
     groundAnteriorCS[3].setRange(groundAnteriorCS3range);
@@ -106,13 +115,13 @@ void KaneScherFig2Modeling::addJoints()
     // ty
     double groundAnteriorCS4range[2] = {-1, 100};
     groundAnteriorCS[4].setRange(groundAnteriorCS4range);
-    groundAnteriorCS[4].setDefaultValue(20);
-	groundAnteriorCS[4].setDefaultLocked(true);
+    groundAnteriorCS[4].setDefaultValue(4);
+	groundAnteriorCS[4].setDefaultLocked(false);
     // tz
     double groundAnteriorCS5range[2] = {-5, 5};
     groundAnteriorCS[5].setRange(groundAnteriorCS5range);
     groundAnteriorCS[5].setDefaultValue(0);
-    groundAnteriorCS[5].setDefaultLocked(false);
+    groundAnteriorCS[5].setDefaultLocked(true);
 
     // Frame in which the X-axis points along ray K. K lies in the A1-A2
 	// plane, so frame K is formed by rotation (by angle alpha) about A3.
@@ -126,10 +135,12 @@ void KaneScherFig2Modeling::addJoints()
 		*frameK, locationAKinFrameK, orientationAKinFrameK, false);
 	CoordinateSet& anteriorFrameKCS = anteriorFrameK->upd_CoordinateSet();
 	anteriorFrameKCS[0].setName("kane_alpha");
-	double anteriorFrameKCS0range[2] = {convertDegreesToRadians(35),
-		convertDegreesToRadians(85)};
+	//double anteriorFrameKCS0range[2] = {convertDegreesToRadians(35),
+	//	convertDegreesToRadians(85)};
+	double anteriorFrameKCS0range[2] = {-Pi, 0};
 	anteriorFrameKCS[0].setRange(anteriorFrameKCS0range);
-	anteriorFrameKCS[0].setDefaultValue(convertDegreesToRadians(60));
+	//anteriorFrameKCS[0].setDefaultValue(convertDegreesToRadians(60));
+	anteriorFrameKCS[0].setDefaultValue(0);
 	anteriorFrameKCS[0].setDefaultLocked(true);
 
     // Defining the following axes:
@@ -165,17 +176,19 @@ void KaneScherFig2Modeling::addJoints()
 		*frameB2, locationPB2InFrameB2, orientationPB2InFrameB2, false);
 	CoordinateSet& FramePFrameB2CS = FramePFrameB2->upd_CoordinateSet();
 	FramePFrameB2CS[0].setName("kane_beta");
-	double FramePFrameB2CS0range[2] = {convertDegreesToRadians(60),
-		convertDegreesToRadians(90)};
+	//double FramePFrameB2CS0range[2] = {convertDegreesToRadians(60),
+	//	convertDegreesToRadians(90)};
+	double FramePFrameB2CS0range[2] = {0, Pi};
 	FramePFrameB2CS[0].setRange(FramePFrameB2CS0range);
-	FramePFrameB2CS[0].setDefaultValue(convertDegreesToRadians(75));
+	//FramePFrameB2CS[0].setDefaultValue(convertDegreesToRadians(75));
+	FramePFrameB2CS[0].setDefaultValue(0);
 	FramePFrameB2CS[0].setDefaultLocked(true);
 
 	// Connecting the posterior body (i.e., B1).
 	Vec3 locationB2PostInFrameB2(0);
 	Vec3 orientationB2PostInFrameB2(0, 0, -0.5 * Pi);
 	Vec3 locationB2PostInPosterior(0);
-	Vec3 orientationB2PostInPosterior(0, 0, 0.5 * Pi);
+	Vec3 orientationB2PostInPosterior(Pi, 0, 0.5 * Pi);
 	PinJoint* FrameB2Posterior = new PinJoint("B2_posterior",
 		*frameB2, locationB2PostInFrameB2, orientationB2PostInFrameB2,
 		*posteriorBody, locationB2PostInPosterior, orientationB2PostInPosterior, false);
@@ -186,7 +199,29 @@ void KaneScherFig2Modeling::addJoints()
 	FrameB2PosteriorCS[0].setDefaultValue(0);
 	FrameB2PosteriorCS[0].setDefaultLocked(false);
 
-	// TODO: add N, define gamma, add front and back feet?
+	// TODO: Adding "legs" as plates pinned to the underside of each half
+	// of the cat.
+	/*legLength = 1;
+	legWidth = 1;
+	legMass = 1;
+	comLocInBody = Vec3(0.0,0.0,0.0);
+	bodyInertia = Inertia(1.0,1.0,1.0,0.0,0.0,0.0);
+	Body* frontLegs = new Body("frontLegs", legMass, comLocInBody, bodyInertia);
+	locationInParent = Vec3(0.0,-thighLength/2.0,0.0);
+	orientationInParent = Vec3(0.0,0.0,0.0);
+	locationInChild = Vec3(0.0,shankLength/2.0,0.0);
+	orientationInChild = Vec3(0.0,0.0,0.0);
+	PinJoint *rightKnee = new PinJoint("RightShankToThigh", *rightThigh, locationInParent, orientationInParent, *rightShank, locationInChild, orientationInChild, false);
+	CoordinateSet &rightKneeJoint = rightKnee->upd_CoordinateSet();
+	rightKneeJoint[0].setName("RKnee_rz");
+	double rotRangeRightKnee[2] = {convertDegreesToRadians(-100.0), 0.0};
+	rightKneeJoint[0].setRange(rotRangeRightKnee);
+	rightKneeJoint[0].setDefaultValue(convertDegreesToRadians(-30.0));
+	rightShank->addDisplayGeometry("sphere.vtp");
+	rightShank->updDisplayer()->setScaleFactors(Vec3(shankLength/10.0,shankLength,shankLength/10.0));
+	osimModel.addBody(rightShank);*/
+
+	// TODO: add N, define gamma?
 
     // -- Add bodies.
     cat.addBody(anteriorBody);
@@ -194,10 +229,13 @@ void KaneScherFig2Modeling::addJoints()
 	cat.addBody(frameP);
 	cat.addBody(frameB2);
     cat.addBody(posteriorBody);
+	//cat.addBody(frameN);
 	//cat.addBody(frontFeet);
 	//cat.addBody(backFeet);
 
-	// -- Add "no-twist" constraint.
+	// TODO: add contact (in header file)
+
+	// -- Add "no-twist" constraint. (TODO: is this right? don't we want to constrain speeds?)
 	CoordinateCouplerConstraint * twistConstr = new CoordinateCouplerConstraint();
     twistConstr->setName("twist");
     twistConstr->setIndependentCoordinateNames(Array<string>("kane_u_integ", 1));
@@ -206,6 +244,29 @@ void KaneScherFig2Modeling::addJoints()
     twistConstrFcnCoeff.append(1);
     twistConstr->setFunction(new LinearFunction(twistConstrFcnCoeff));
 	cat.addConstraint(twistConstr);
-
 }
 
+void KaneScherFig2Modeling::addActuators()
+{
+    // Two springs connecting the anterior and posterior halves of
+	// the cat, positioned symmetrically about its midline, act as
+	// abdomen muscles.
+	string body1Name = "anteriorBody";
+	string body2Name = "posteriorBody";
+    Vec3 point1L(-0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
+    Vec3 point2L(0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
+	Vec3 point1R(-0.5 * segmentalLength, 0, -0.5 * segmentalDiam);
+    Vec3 point2R(0.5 * segmentalLength, 0, -0.5 * segmentalDiam);
+    double stiffness = 1.0;
+    double restlength = 0.75 * segmentalLength;
+    PointToPointSpring * absL = new PointToPointSpring(body1Name, point1L,
+                                                       body2Name, point2L,
+                                                       stiffness, restlength);
+	PointToPointSpring * absR = new PointToPointSpring(body1Name, point1R,
+                                                       body2Name, point2R,
+                                                       stiffness, restlength);
+    absL->setName("left_abs");
+	absR->setName("right_abs");
+	cat.addForce(absL);
+	cat.addForce(absR);
+}

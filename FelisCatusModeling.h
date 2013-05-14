@@ -55,8 +55,8 @@ public:
         cat.setGravity(Vec3(0, 0, 0));
 
         // Constants/parameters.
-        segmentalLength = 1; // m
-        segmentalDiam = 1; // m
+        segmentalLength = 0.2; // m
+        segmentalDiam = 0.15; // m
         segmentalMass = 1; // kg
         // See Kane and Scher (1969) about next 3 lines:
         I = 1; // kg-m^2; transverse moment of inertia.
@@ -146,6 +146,17 @@ protected:
         return massless;
     }
 
+	void addContactGeometry()
+	{
+		// ---- Contact geometry.
+		// TODO
+	}
+
+	void addContactForces()
+	{
+		// ---- Contact forces.
+		// TODO
+	}
 
     void addCoordinateLimitForces()
     {
