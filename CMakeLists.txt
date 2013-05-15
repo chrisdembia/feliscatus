@@ -104,6 +104,8 @@ ADD_MODEL_EXECUTABLE(model_dembiasketch)
 ADD_MODEL_EXECUTABLE(model_kanescherfig2)
 # ...and now for the Kane, Scher spinal joint based off their Figure 3.
 ADD_MODEL_EXECUTABLE(model_kanescherfig3)
+# Combining figures 2 and 3.
+ADD_MODEL_EXECUTABLE(model_kaneschercombined)
 
 SET(SIMULATE_EXEC_NAME simulate)
 ADD_EXECUTABLE(${SIMULATE_EXEC_NAME} simulate.cpp)
