@@ -29,8 +29,8 @@ class FelisCatusOptimizerSystem : public OptimizerSystem
 public:
     /**
      * @param name Name of the run. We create a log file using this name.
-     * @param modeling An instance of a subclass of FelisCatusModeling, so that
-     *      we can make a model that we will subsequently control.
+     * @param modelFileName An OpenSim model filename of a model possessing the
+     *      qualities described in this class' description.
      * @param numOptimSplinePoints The number of points (optimization parameters)
      *      for each spline. The total number of optimization parameters will
      *      be numSplinePoints * (# of actuators in model). There could be
@@ -38,16 +38,20 @@ public:
      *      optimized for.
      * */
     FelisCatusOptimizerSystem(string name,
-            FelisCatusModeling & modeling,
-            int numSplinePoints=5)
-        : _name(name), _modeling(modeling),
+            string modelFileName,
+            int numSplinePoints=5) :
+        _name(name),
+        _model(Model(modelFileName)),
         _numOptimSplinePoints(numOptimSplinePoints),
         _objectiveCalls(0)
     {
-        // Create the model with an appropriate name.
+        // Create a log.
+        _optLog = ofstream(name + ".txt", ofstream::out);
+        // TODO ideally give date.
+        _optLog << "Model file name: " << modelFileName << endl;
 
         // Compute the number of optimization parameters we'll have.
-        // TODO
+        int numActuators = _model.getActuators().getSize();
         int numParameters = numActuators * _numSplinePoints;
         setNumParameters(numParameters);
 
@@ -79,9 +83,13 @@ public:
 
         // --- Run a forward dynamics simulation.
 
+        // Assign the new value of the objective function.
         // --------------------------------------------------------------------
         f = TODO;
         // --------------------------------------------------------------------
+
+        // Update the log.
+
 
         return 0;
     }
@@ -92,7 +100,7 @@ public:
      * */
     void printToLog(string message)
     {
-        log << message << endl;
+        _optLog << message << endl;
     }
 
     int getObjectiveCalls() const { return _objectiveCalls; }
@@ -102,14 +110,18 @@ private:
     /// See constructor.
     string _name;
 
-    /// See constructor.
-    FelisCatusModeling _modeling;
+    /// The model containing the attributes described in this class'
+    //description.
+    Model _model;
 
     /// See constructor.
     int _numOptimSplinePoints;
 
     /// Counts the number of calls to objectiveFunc.
     mutable int _objectiveCalls;
+
+    /// To record details of this run.
+    mutable ofstream _optLog;
 };
 
 #endif

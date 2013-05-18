@@ -22,22 +22,16 @@ int main(int argc, char * argv[])
     // argv is an array of space-delimited command line inputs, the first one
     //      necessarily being the name of the executable.
     string help = "User must provide the following inputs:\n\n\t"
-                  "1: name of cat modeling to use for this optimization,\n\t"
+                  "1: name of cat model file, WITHOUT .osim extension,\n\t"
                   "2: name of the run, which we append to the cat model name.\n"
                   "\nExample:\n\t"
-                  "optimize flexTwistRetractLegs testRun\n";
+                  "optimize feliscatus_flexTwistRetractLegs testRun\n";
     if (argc == 3)
-    {
-        string preName = argv[2];
-        if (strcmp(argv[1], "flexTwistRetractLegs") == 0)
-        {
-            sys = FelisCatusOptimizerSystem("flexTwistRetractLegs" + postName,
-                    FlexTwistRetractLegsModeling());
-        }
-        else
-        {
-            cout << "\nUnrecognized cat modeling name. " << help << endl;
-            return 0;
+    { // Correct number of inputs.
+        string modelFileName = argv[1];
+        string postName = argv[2];
+        sys = FelisCatusOptimizerSystem(modelFileName + postName,
+                modelFileName + ".osim");
         }
     }
     else
