@@ -137,6 +137,14 @@ ADD_MODEL_EXECUTABLE(model_flexTwistRetractLegs)
 SET(SIMULATE_EXEC_NAME simulate)
 ADD_EXECUTABLE(${SIMULATE_EXEC_NAME} simulate.cpp)
 TARGET_LINK_LIBRARIES(${SIMULATE_EXEC_NAME} ${OSIM_LIBRARIES})
+
+INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
+
+ADD_EXECUTABLE(optimize
+    optimize.cpp
+    FelisCatusModeling.h
+    )
+TARGET_LINK_LIBRARIES(optimize ${OSIM_LIBRARIES})
 	
 # ----- Old script stuff for reference.
 
