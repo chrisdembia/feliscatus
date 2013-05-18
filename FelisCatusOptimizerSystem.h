@@ -165,13 +165,16 @@ public:
         // --- Construct the objective function, term by term.
         // Create a copy of the init state; we need a state consistent w/model.
         State aState = initState;
-        _cat.getMultibodySystem().realize(initState, Stage::Acceleration);
+        _cat.getMultibodySystem().realize(aState, Stage::Acceleration);
         const CoordinateSet& coordinates = _cat.getCoordinateSet();
         double roll = coordinates.get("roll").getValue(aState);
         double twist = coordinates.get("twist").getValue(aState);
+		double hunch = coordinates.get("hunch").getValue(aState);
+		double pitch = coordinates.get("pitch").getValue(aState);
         double deviationFromLegsDown = pow(roll - Pi, 2) + pow(twist, 2);
+		double deviationFromSymmetry = pow(hunch - 2 * pitch, 2);
         // ====================================================================
-        f = deviationFromLegsDown;
+        f = deviationFromLegsDown + deviationFromSymmetry;
         // ====================================================================
 
         // Update the log.
