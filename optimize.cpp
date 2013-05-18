@@ -44,6 +44,7 @@ int main(int argc, char * argv[])
         opt.setLimitedMemoryHistory(500);
 
         // Initialize parameters for the optimization to be zero.
+        // TODO is there a way to be smarter with these inputs?
         Vector initParameters(sys.getNumParameters(), 0.0);
 
         // And we're off!
