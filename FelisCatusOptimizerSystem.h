@@ -1,12 +1,17 @@
 #ifndef FELISCATUSOPTIMIZERSYSTEM_H
 #define FELISCATUSOPTIMIZERSYSTEM_H
 
+#include <stdio.h>
+#include <time.h>
+#include <fstream>
+
 #include <OpenSim/OpenSim.h>
 
 #include "FelisCatusModeling.h"
 
 using std::cout;
 using std::endl;
+using std::ofstream;
 using std::string;
 
 using OpenSim::Model;
@@ -39,21 +44,24 @@ public:
      * */
     FelisCatusOptimizerSystem(string name,
             string modelFileName,
-            int numSplinePoints=5) :
+            int numOptimSplinePoints=5) :
         _name(name),
         _model(Model(modelFileName)),
         _numOptimSplinePoints(numOptimSplinePoints),
         _objectiveCalls(0)
     {
         // Create a log.
-        _optLog = ofstream(name + ".txt", ofstream::out);
-        // TODO ideally give date.
+        _optLog.open((name + ".txt").c_str(), ofstream::out);
+        _optLog << "Felis Catus optimization log." << endl;
+        time_t rawtime; time(&rawtime);
+        _optLog << ctime(&rawtime);
         _optLog << "Model file name: " << modelFileName << endl;
 
         // Compute the number of optimization parameters we'll have.
         int numActuators = _model.getActuators().getSize();
-        int numParameters = numActuators * _numSplinePoints;
-        setNumParameters(numParameters);
+        int numParameters = numActuators * _numOptimSplinePoints;
+        // TODO setNumParameters(numParameters);
+        setNumParameters(1);
 
         // Add a PrescribedController to the model.
 
@@ -71,7 +79,13 @@ public:
 
         MOS.setParameterLimits(lowerLimits, upperLimits);
         */
+        setParameterLimits(Vector(1, -5.0), Vector(1, 5.0));
 
+    }
+
+    ~FelisCatusOptimizerSystem()
+    {
+        _optLog.close();
     }
 
     int objectiveFunc(const Vector & parameters,
@@ -81,14 +95,22 @@ public:
         // Increment the number of calls to this function.
         _objectiveCalls++;
 
+        // Unpack parameters.
+
         // --- Run a forward dynamics simulation.
 
         // Assign the new value of the objective function.
         // --------------------------------------------------------------------
-        f = TODO;
+        f = pow(parameters[0] - 2.0, 2); // TODO;
         // --------------------------------------------------------------------
 
         // Update the log.
+        _optLog << _objectiveCalls;
+        for (int i = 0; i < parameters.size(); i++)
+        {
+            _optLog << " " << parameters[i];
+        }
+        _optLog << endl;
 
 
         return 0;
@@ -116,6 +138,9 @@ private:
 
     /// See constructor.
     int _numOptimSplinePoints;
+
+    // 'mutable' lets us modify the member inside const member functions, such
+    // as objectiveFunc() above.
 
     /// Counts the number of calls to objectiveFunc.
     mutable int _objectiveCalls;

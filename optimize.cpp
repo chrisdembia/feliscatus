@@ -10,12 +10,13 @@ using std::cout;
 using std::endl;
 using std::string;
 
+using SimTK::Optimizer;
+
 /**
  * Creates a FelisCatusOptimizerSystem and then optimizes it.
  * */
 int main(int argc, char * argv[])
 {
-    FelisCatusOptimizerSystem sys;
     // Figure out from the user which cat model to use.
     // argc is the number of command line inputs, INCLUDING the name of the
     //      exectuable as well. Thus, it'll always be greater than/equal to 1.
@@ -30,36 +31,38 @@ int main(int argc, char * argv[])
     { // Correct number of inputs.
         string modelFileName = argv[1];
         string postName = argv[2];
-        sys = FelisCatusOptimizerSystem(modelFileName + postName,
+        FelisCatusOptimizerSystem sys(modelFileName + "_" + postName,
                 modelFileName + ".osim");
-        }
+        // TODO allow input of number of spline points.
+
+        // Create the optimizer with our system.
+        Optimizer opt(sys, SimTK::InteriorPoint);
+        // TODO choose tolerance better.
+        opt.setConvergenceTolerance(1.0);
+        opt.useNumericalGradient(true);
+        opt.setMaxIterations(1000);
+        opt.setLimitedMemoryHistory(500);
+
+        // Initialize parameters for the optimization to be zero.
+        Vector initParameters(sys.getNumParameters(), 0.0);
+
+        // And we're off!
+        double f = opt.optimize(initParameters);
+
+        // Print a message in the optimization log.
+        char message[200];
+        sprintf(message,
+                "Done in %i objective function calls, with optimum value %f.",
+                sys.getObjectiveCalls(), f);  
+        sys.printToLog(message);
+
+        cout << "Done!" << endl;
     }
     else
     { // Too few/many inputs, etc.
         cout << "\nIncorrect input provided. " << help << endl;
         return 0;
     }
-
-    // Create the optimizer with our system.
-    Optimizer opt(sys, SimTK::InteriorPoint);
-    // TODO choose tolerance better.
-    opt.setConvergenceTolerance(1.0);
-    opt.useNumericalGradient(true);
-    opt.setMaxIterations(1000);
-    opt.setLimitedMemoryHistory(500);
-
-    // Initialize parameters for the optimization to be zero.
-    Vector initParameters(MOS.getNumParameters(), 0.0);
-
-    // And we're off!
-    double f = opt.optimize(initParameters);
-
-    // Print a message in the optimization log.
-    char message[200];
-    sprintf(message,
-            "Done in %i objective function calls, with optimum value %f.",
-            sys.getObjectiveCalls(), f);  
-    sys.printToLog(message);
 
     return EXIT_SUCCESS;
 };
