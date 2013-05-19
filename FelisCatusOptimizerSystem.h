@@ -214,7 +214,11 @@ public:
 
     int getObjectiveCalls() const { return _objectiveCalls; }
 
+    /// @brief Prints the current model to the given file name.
     void printModel(string filename) { _cat.print(filename); }
+
+    /// @brief Serializes the current set of splines used for the actuators.
+    void printSplines(string filename) { _splines.print(filename); }
 
 private:
 

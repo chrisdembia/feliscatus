@@ -15,7 +15,8 @@ using SimTK::Optimizer;
 /**
  * Creates a FelisCatusOptimizerSystem and then optimizes it. Prints out an
  * osim file of the cat model (with controls) that results from the
- * optimization.
+ * optimization, as well as an XML file containing all the splines used for
+ * controls.
  * */
 int main(int argc, char * argv[])
 {
@@ -54,6 +55,10 @@ int main(int argc, char * argv[])
 
         // Print the optimized model so we can explore the resulting motion.
         sys.printModel(modelFileName + "_" + postName + "_" + "opt.osim");
+
+        // Print the control splines so we can explore the resulting actuation.
+        sys.printSplines(
+                modelFileName + "_" + postName + "_" + "opt_splines.xml");
 
         cout << "Done!" << endl;
     }
