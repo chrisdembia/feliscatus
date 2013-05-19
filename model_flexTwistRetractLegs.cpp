@@ -167,11 +167,11 @@ void FlexTwistRetractLegsModeling::addActuators()
     CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
     CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
 
-    twistAct->setName("twistor");
-    jiveAct->setName("jivor");
-    hunchAct->setName("hunchor");
-    frontLegsAct->setName("frontLegsor");
-    backLegsAct->setName("backLegsor");
+    twistAct->setName("twist_actuator");
+    jiveAct->setName("jive_actuator");
+    hunchAct->setName("hunch_actuator");
+    frontLegsAct->setName("frontLegs_actuator");
+    backLegsAct->setName("backLegs_actuator");
 
     twistAct->setMinControl(-maxTorque);
     twistAct->setMaxControl(maxTorque);
