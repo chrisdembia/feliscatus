@@ -14,6 +14,7 @@ using std::cout;
 using std::endl;
 using std::ofstream;
 using std::string;
+using std::vector;
 
 using OpenSim::CoordinateSet;
 using OpenSim::FunctionSet;
@@ -98,24 +99,22 @@ public:
         _cat.addController(flipController);
 
         // Create SimmSpline's for each actuator.
-        _splines.setName("flip_control_fuctions");
-        _splines.setSize(_numActuators);
         for (int i = 0; i < _numActuators; i++)
         {
             // Create a function for this actuator.
-            _splines.insert(i, SimmSpline());
+            _splines.push_back(new SimmSpline());
 
             // Name this spline with the name of the corresponding actuator.
-            _splines[i].setName(_cat.getActuators().get(i).getName() + "_fcn");
+            _splines[i]->setName(_cat.getActuators().get(i).getName() + "_fcn");
 
             // Add the correct number of points to this spline.
             for (int j = 0; j < _numOptimSplinePoints; j++)
             { // TODO change times from index to something reasonable.
-                _splines[i].addPoint((double)j, 0.0);
+                _splines[i]->addPoint((double)j, 0.0);
             }
 
             // Tell the controller about this function.
-            flipController->prescribeControlForActuator(i, &_splines[i]);
+            flipController->prescribeControlForActuator(i, _splines[i]);
         }
 
         // Set parameter limits from the actuator torque limits in the model.
@@ -165,7 +164,7 @@ public:
             for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
             {
                 int paramIndex = iAct * _numOptimSplinePoints + iPts;
-                _splines[iAct].setY(iPts, parameters[paramIndex]);
+                _splines[iAct]->setY(iPts, parameters[paramIndex]);
             }
         }
 
@@ -245,10 +244,10 @@ public:
         // Must use FunctionSet because serialization of the template Set< >
         // gives a corrupt (?) serialization.
         FunctionSet fset;
-        fset.setSize(_splines.getSize());
-        for (int iFcn = 0; iFcn < _splines.getSize(); iFcn++)
+        fset.setSize(_splines.size());
+        for (int iFcn = 0; iFcn < _splines.size(); iFcn++)
         {
-            fset.insert(iFcn, _splines[iFcn]);
+            fset.insert(iFcn, *_splines[iFcn]);
         }
         fset.print(_name + "/" + filename);
     }
@@ -268,8 +267,8 @@ private:
     /// Number of actuators in the model.
     int _numActuators;
 
-    /// A set of the spline functions used in the PrescribedController.
-    Set<SimmSpline> _splines;
+    /// A vector of the spline functions used in the PrescribedController.
+    vector<SimmSpline *> _splines;
 
     // 'mutable' lets us modify the member inside const member functions, such
     // as objectiveFunc() above.

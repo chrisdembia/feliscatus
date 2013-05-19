@@ -40,7 +40,7 @@ int main(int argc, char * argv[])
         // Create the optimizer with our system.
         Optimizer opt(sys, SimTK::InteriorPoint);
         // TODO choose tolerance better.
-        opt.setConvergenceTolerance(1.0);
+        opt.setConvergenceTolerance(0.01);
         opt.useNumericalGradient(true);
         opt.setMaxIterations(1000);
         opt.setLimitedMemoryHistory(500);
