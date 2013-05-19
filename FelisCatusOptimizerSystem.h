@@ -92,11 +92,19 @@ public:
         _splines.setSize(_numActuators);
         for (int i = 0; i < _numActuators; i++)
         {
+            // Create a function for this actuator.
             _splines.insert(i, SimmSpline());
+
+            // Name this spline with the name of the corresponding actuator.
+            _splines[i].setName(_cat.getActuators().get(i).getName() + "_fcn");
+
+            // Add the correct number of points to this spline.
             for (int j = 0; j < _numOptimSplinePoints; j++)
             { // TODO change times from index to something reasonable.
                 _splines[i].addPoint((double)j, 0.0);
             }
+
+            // Tell the controller about this function.
             flipController->prescribeControlForActuator(i, &_splines[i]);
         }
 
@@ -126,7 +134,7 @@ public:
                     << iPts << " ";
             }
         }
-        _optLog << endl;
+        _optLog << "objective_function" << endl;
     }
 
     ~FelisCatusOptimizerSystem()
@@ -217,8 +225,14 @@ public:
     /// @brief Prints the current model to the given file name.
     void printModel(string filename) { _cat.print(filename); }
 
-    /// @brief Serializes the current set of splines used for the actuators.
-    void printSplines(string filename) { _splines.print(filename); }
+    /// @brief Serializes the current set of functions used for the actuators.
+    void printPrescribedControllerFunctionSet(string filename)
+    {
+        // Must use FunctionSet because serialization of the template Set< >
+        // doegives a corrupt (?) serialization.
+        // TODO the casting doesn't affect the printing.
+        dynamic_cast<FunctionSet *>(&_splines)->print(filename);
+    }
 
 private:
 
@@ -226,8 +240,7 @@ private:
     string _name;
 
     /// The model containing the attributes described in this class'
-    //description.
-    // TODO do we want this mutable?
+    /// description.
     mutable Model _cat;
 
     /// See constructor.

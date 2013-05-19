@@ -57,7 +57,7 @@ int main(int argc, char * argv[])
         sys.printModel(modelFileName + "_" + postName + "_" + "opt.osim");
 
         // Print the control splines so we can explore the resulting actuation.
-        sys.printSplines(
+        sys.printPrescribedControllerFunctionSet(
                 modelFileName + "_" + postName + "_" + "opt_splines.xml");
 
         cout << "Done!" << endl;
