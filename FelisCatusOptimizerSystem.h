@@ -203,7 +203,7 @@ public:
         double deviationFromLegsDown = pow(roll - Pi, 2) + pow(twist, 2);
 		double deviationFromSymmetry = pow(hunch - 2 * pitch, 2);
         // ====================================================================
-        f = 1.0; // TODO deviationFromLegsDown + deviationFromSymmetry;
+        f = deviationFromLegsDown + deviationFromSymmetry;
         // ====================================================================
 
         // Update the log.
@@ -246,8 +246,10 @@ public:
         // gives a corrupt (?) serialization.
         FunctionSet fset;
         fset.setSize(_splines.getSize());
-        for (int iFcn = 0; iFcn < fset.getSize(); iFcn++)
-            fset.cloneAndAppend(_splines[iFcn]);
+        for (int iFcn = 0; iFcn < _splines.getSize(); iFcn++)
+        {
+            fset.insert(iFcn, _splines[iFcn]);
+        }
         fset.print(_name + "/" + filename);
     }
 
