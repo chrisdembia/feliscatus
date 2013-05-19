@@ -162,10 +162,15 @@ void FlexTwistRetractLegsModeling::addActuators()
 {
     double maxTorque = 100; // Newton-meters.
     CoordinateActuator * twistAct = new CoordinateActuator("twist");
+    twistAct->setName("twistor");
     CoordinateActuator * jiveAct = new CoordinateActuator("jive");
+    jiveAct->setName("jivor");
     CoordinateActuator * hunchAct = new CoordinateActuator("hunch");
+    hunchAct->setName("hunchor");
     CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
+    frontLegsAct->setName("frontLegsor");
     CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
+    backLegsAct->setName("backLegsor");
 
     twistAct->setMinControl(-maxTorque);
     twistAct->setMaxControl(maxTorque);
