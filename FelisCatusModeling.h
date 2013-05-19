@@ -1,8 +1,8 @@
+
 #ifndef FELISCATUSMODELING_H
 #define FELISCATUSMODELING_H
 
 #include <iostream>
-
 #include <OpenSim/OpenSim.h>
 
 using std::cout;
@@ -14,14 +14,15 @@ using OpenSim::Array;
 using OpenSim::Body;
 using OpenSim::CoordinateCouplerConstraint;
 using OpenSim::CoordinateSet;
-using OpenSim::CustomJoint;
 using OpenSim::DisplayGeometry;
 using OpenSim::LinearFunction;
 using OpenSim::PinJoint;
 using OpenSim::BallJoint;
+using OpenSim::WeldJoint;
+using OpenSim::CustomJoint;
 using OpenSim::Model;
 using OpenSim::SpatialTransform;
-using OpenSim::TorqueActuator;
+using OpenSim::CoordinateActuator;
 
 using SimTK::Inertia;
 using SimTK::Pi;
@@ -38,7 +39,7 @@ using SimTK::Vec3;
  * the model contains "dummy" frames (i.e., massless bodies) that can be used
  * to specify rotational relations between the anterior and posterior segments
  * of the cat.
- **/
+ * */
 
 class FelisCatusModeling
 {

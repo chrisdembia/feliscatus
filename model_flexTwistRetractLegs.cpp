@@ -1,13 +1,12 @@
+
 #include "FelisCatusModeling.h"
 
-using OpenSim::CoordinateActuator;
-
 /**
- * This models the cat as two elliptical segments conneted by a
+ * This models the cat as two elliptical segments connected by a
  * two degree-of-freedom (back flexion and spinal twist) joint.
  * It also includes "retractable" legs that allow the cat to 
  * change the effective moment of inertia of each of its halves.
- **/
+ * */
 
 class FlexTwistRetractLegsModeling : public FelisCatusModeling
 {
@@ -160,23 +159,19 @@ void FlexTwistRetractLegsModeling::addJoints()
 
 void FlexTwistRetractLegsModeling::addActuators()
 {
-    double maxTorque = 100; // Newton-meters.
+    double maxTorque = 100; // N-m
     CoordinateActuator * twistAct = new CoordinateActuator("twist");
-    CoordinateActuator * jiveAct = new CoordinateActuator("jive");
     CoordinateActuator * hunchAct = new CoordinateActuator("hunch");
     CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
     CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
 
     twistAct->setName("twist_actuator");
-    jiveAct->setName("jive_actuator");
     hunchAct->setName("hunch_actuator");
     frontLegsAct->setName("frontLegs_actuator");
     backLegsAct->setName("backLegs_actuator");
 
     twistAct->setMinControl(-maxTorque);
     twistAct->setMaxControl(maxTorque);
-    jiveAct->setMinControl(-maxTorque);
-    jiveAct->setMaxControl(maxTorque);
     hunchAct->setMinControl(-maxTorque);
     hunchAct->setMaxControl(maxTorque);
     frontLegsAct->setMinControl(-maxTorque);
@@ -185,7 +180,6 @@ void FlexTwistRetractLegsModeling::addActuators()
     backLegsAct->setMaxControl(maxTorque);
 
     cat.addForce(twistAct);
-    cat.addForce(jiveAct);
     cat.addForce(hunchAct);
     cat.addForce(frontLegsAct);
     cat.addForce(backLegsAct);
