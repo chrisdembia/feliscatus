@@ -103,14 +103,14 @@ public:
         // Set parameter limits from the actuator torque limits in the model.
         Vector lowerLimits(getNumParameters(), 0.0);
         Vector upperLimits(getNumParameters(), 0.0);
-        for (int i = 0; i < _numActuators; i++)
+        for (int iAct = 0; iAct < _numActuators; iAct++)
         {
             // Max/min for all spline points for the i-th actuator.
-            double minControl = _cat.getActuators().get(i).getMinControl();
-            double maxControl = _cat.getActuators().get(i).getMaxControl();
-            for (int j = 0; i < _numOptimSplinePoints; j++)
+            double minControl = _cat.getActuators().get(iAct).getMinControl();
+            double maxControl = _cat.getActuators().get(iAct).getMaxControl();
+            for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
             {
-                int paramIndex = i * _numOptimSplinePoints + j;
+                int paramIndex = iAct * _numOptimSplinePoints + iPts;
                 lowerLimits[paramIndex] = minControl;
                 upperLimits[paramIndex] = maxControl;
             }
@@ -131,12 +131,12 @@ public:
         _objectiveCalls++;
 
         // Unpack parameters into the model: update spline points.
-        for (int i = 0; i < _numActuators; i++)
+        for (int iAct = 0; iAct < _numActuators; iAct++)
         {
-            for (int j = 0; j < _numOptimSplinePoints; j++)
+            for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
             {
-                int paramIndex = i * _numOptimSplinePoints + j;
-                _splines[i].setY(j, parameters[paramIndex]);
+                int paramIndex = iAct * _numOptimSplinePoints + iPts;
+                _splines[iAct].setY(iPts, parameters[paramIndex]);
             }
         }
 
