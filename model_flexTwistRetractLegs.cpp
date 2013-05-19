@@ -1,5 +1,7 @@
 #include "FelisCatusModeling.h"
 
+using OpenSim::CoordinateActuator;
+
 /**
  * This models the cat as two elliptical segments conneted by a
  * two degree-of-freedom (back flexion and spinal twist) joint.
@@ -10,12 +12,14 @@
 class FlexTwistRetractLegsModeling : public FelisCatusModeling
 {
     void addJoints();
+    void addActuators();
 };
 
 int main(int argc, char *argv[])
 {
     FlexTwistRetractLegsModeling m = FlexTwistRetractLegsModeling();
-    m.makeModel("Leland_flexTwistRetractLegs", "feliscatus_flexTwistRetractLegs.osim");
+    m.makeModel("Leland_flexTwistRetractLegs",
+            "feliscatus_flexTwistRetractLegs.osim");
 
     return EXIT_SUCCESS;
 };
@@ -78,17 +82,17 @@ void FlexTwistRetractLegsModeling::addJoints()
     double groundAnteriorCS3range[2] = {-1, 1};
     groundAnteriorCS[3].setRange(groundAnteriorCS3range);
     groundAnteriorCS[3].setDefaultValue(0);
-	groundAnteriorCS[3].setDefaultLocked(true);
+	groundAnteriorCS[3].setDefaultLocked(false);
     // ty
     double groundAnteriorCS4range[2] = {-1, 5};
     groundAnteriorCS[4].setRange(groundAnteriorCS4range);
     groundAnteriorCS[4].setDefaultValue(2);
-	groundAnteriorCS[4].setDefaultLocked(true);
+	groundAnteriorCS[4].setDefaultLocked(false);
     // tz
     double groundAnteriorCS5range[2] = {-1, 1};
     groundAnteriorCS[5].setRange(groundAnteriorCS5range);
     groundAnteriorCS[5].setDefaultValue(0);
-    groundAnteriorCS[5].setDefaultLocked(true);
+    groundAnteriorCS[5].setDefaultLocked(false);
 
     // Connecting the anterior and posterior bodies.
     Vec3 locAPInAnterior(-0.4 * segmentalLength, 0, 0);
@@ -152,4 +156,8 @@ void FlexTwistRetractLegsModeling::addJoints()
     cat.addBody(posteriorBody);
 	cat.addBody(anteriorLegs);
 	cat.addBody(posteriorLegs);
+}
+
+void FlexTwistRetractLegsModeling::addActuators()
+{
 }
