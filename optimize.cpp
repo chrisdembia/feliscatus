@@ -27,21 +27,20 @@ int main(int argc, char * argv[])
     //      necessarily being the name of the executable.
     string help = "User must provide the following inputs:\n\n\t"
                   "1: name of cat model file, WITHOUT .osim extension,\n\t"
-                  "2: name of the run, which we append to the cat model name.\n"
+                  "2: name of the run; a directory with this name is created.\n"
                   "\nExample:\n\t"
                   "optimize feliscatus_flexTwistRetractLegs testRun\n";
     if (argc == 3)
     { // Correct number of inputs.
         string modelFileName = argv[1];
-        string postName = argv[2];
-        FelisCatusOptimizerSystem sys(modelFileName + "_" + postName,
-                modelFileName + ".osim");
+        string name = argv[2];
+        FelisCatusOptimizerSystem sys(name, modelFileName + ".osim");
         // TODO allow input of number of spline points.
 
         // Create the optimizer with our system.
         Optimizer opt(sys, SimTK::InteriorPoint);
         // TODO choose tolerance better.
-        opt.setConvergenceTolerance(0.01);
+        opt.setConvergenceTolerance(1.0);
         opt.useNumericalGradient(true);
         opt.setMaxIterations(1000);
         opt.setLimitedMemoryHistory(500);
@@ -54,11 +53,11 @@ int main(int argc, char * argv[])
         double f = opt.optimize(initParameters);
 
         // Print the optimized model so we can explore the resulting motion.
-        sys.printModel(modelFileName + "_" + postName + "_" + "opt.osim");
+        sys.printModel(modelFileName + "_" + name + "_" + "opt.osim");
 
         // Print the control splines so we can explore the resulting actuation.
         sys.printPrescribedControllerFunctionSet(
-                modelFileName + "_" + postName + "_" + "opt_splines.xml");
+                modelFileName + "_" + name + "_" + "opt_splines.xml");
 
         cout << "Done!" << endl;
     }

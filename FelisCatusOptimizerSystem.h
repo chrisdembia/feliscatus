@@ -2,6 +2,7 @@
 #define FELISCATUSOPTIMIZERSYSTEM_H
 
 #include <stdio.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <fstream>
 
@@ -65,8 +66,17 @@ public:
         _numOptimSplinePoints(numOptimSplinePoints),
         _objectiveCalls(0)
     {
+        // Create a directory for all the output files we'll create.
+#if defined(_WIN32)
+        _mkdir(name.c_str());
+#else
+        mkdir(name.c_str(), 0777);
+#endif
+
         // Create a log.
-        _optLog.open((name + ".txt").c_str(), ofstream::out);
+        _optLog.open(
+                (_name + "/" + modelFileName + "_" + _name + ".txt").c_str(),
+                ofstream::out);
         _optLog << "Felis Catus optimization log." << endl;
         time_t rawtime; time(&rawtime);
         _optLog << ctime(&rawtime);
@@ -193,7 +203,7 @@ public:
         double deviationFromLegsDown = pow(roll - Pi, 2) + pow(twist, 2);
 		double deviationFromSymmetry = pow(hunch - 2 * pitch, 2);
         // ====================================================================
-        f = deviationFromLegsDown + deviationFromSymmetry;
+        f = 1.0; // TODO deviationFromLegsDown + deviationFromSymmetry;
         // ====================================================================
 
         // Update the log.
@@ -223,15 +233,22 @@ public:
     int getObjectiveCalls() const { return _objectiveCalls; }
 
     /// @brief Prints the current model to the given file name.
-    void printModel(string filename) { _cat.print(filename); }
+    /// The file will be located in the directory containing the log file
+    /// for this optimization run.
+    void printModel(string filename) { _cat.print(_name + "/" + filename); }
 
     /// @brief Serializes the current set of functions used for the actuators.
+    /// The file will be located in the directory containing the log file
+    /// for this optimization run.
     void printPrescribedControllerFunctionSet(string filename)
     {
         // Must use FunctionSet because serialization of the template Set< >
-        // doegives a corrupt (?) serialization.
-        // TODO the casting doesn't affect the printing.
-        dynamic_cast<FunctionSet *>(&_splines)->print(filename);
+        // gives a corrupt (?) serialization.
+        FunctionSet fset;
+        fset.setSize(_splines.getSize());
+        for (int iFcn = 0; iFcn < fset.getSize(); iFcn++)
+            fset.cloneAndAppend(_splines[iFcn]);
+        fset.print(_name + "/" + filename);
     }
 
 private:
