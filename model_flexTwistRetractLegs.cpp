@@ -160,4 +160,27 @@ void FlexTwistRetractLegsModeling::addJoints()
 
 void FlexTwistRetractLegsModeling::addActuators()
 {
+    double maxTorque = 100; // Newton-meters.
+    CoordinateActuator * twistAct = new CoordinateActuator("twist");
+    CoordinateActuator * jiveAct = new CoordinateActuator("jive");
+    CoordinateActuator * hunchAct = new CoordinateActuator("hunch");
+    CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
+    CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
+
+    twistAct->setMinControl(-maxTorque);
+    twistAct->setMaxControl(maxTorque);
+    jiveAct->setMinControl(-maxTorque);
+    jiveAct->setMaxControl(maxTorque);
+    hunchAct->setMinControl(-maxTorque);
+    hunchAct->setMaxControl(maxTorque);
+    frontLegsAct->setMinControl(-maxTorque);
+    frontLegsAct->setMaxControl(maxTorque);
+    backLegsAct->setMinControl(-maxTorque);
+    backLegsAct->setMaxControl(maxTorque);
+
+    cat.addForce(twistAct);
+    cat.addForce(jiveAct);
+    cat.addForce(hunchAct);
+    cat.addForce(frontLegsAct);
+    cat.addForce(backLegsAct);
 }

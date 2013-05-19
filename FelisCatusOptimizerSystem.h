@@ -185,6 +185,10 @@ public:
         }
         _optLog << endl;
 
+        // Print out to the terminal/console every so often.
+        if (_objectiveCalls % 100 == 0)
+            cout << "Objective call # " << _objectiveCalls << endl;
+
         return 0;
     }
 
