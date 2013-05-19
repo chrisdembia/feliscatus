@@ -13,7 +13,9 @@ using std::string;
 using SimTK::Optimizer;
 
 /**
- * Creates a FelisCatusOptimizerSystem and then optimizes it.
+ * Creates a FelisCatusOptimizerSystem and then optimizes it. Prints out an
+ * osim file of the cat model (with controls) that results from the
+ * optimization.
  * */
 int main(int argc, char * argv[])
 {
@@ -38,7 +40,7 @@ int main(int argc, char * argv[])
         // Create the optimizer with our system.
         Optimizer opt(sys, SimTK::InteriorPoint);
         // TODO choose tolerance better.
-        opt.setConvergenceTolerance(1.0);
+        opt.setConvergenceTolerance(0.01);
         opt.useNumericalGradient(true);
         opt.setMaxIterations(1000);
         opt.setLimitedMemoryHistory(500);
@@ -50,12 +52,8 @@ int main(int argc, char * argv[])
         // And we're off!
         double f = opt.optimize(initParameters);
 
-        // Print a message in the optimization log.
-        char message[200];
-        sprintf(message,
-                "Done in %i objective function calls, with optimum value %f.",
-                sys.getObjectiveCalls(), f);  
-        sys.printToLog(message);
+        // Print the optimized model so we can explore the resulting motion.
+        sys.printModel(modelFileName + "_" + postName + "_" + "opt.osim");
 
         cout << "Done!" << endl;
     }

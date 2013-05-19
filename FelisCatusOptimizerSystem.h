@@ -116,6 +116,17 @@ public:
             }
         }
         setParameterLimits(lowerLimits, upperLimits);
+
+        // Create a header row in the log.
+        for (int iAct = 0; iAct < _numActuators; iAct++)
+        {
+            for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
+            {
+                _optLog << _cat.getActuators().get(iAct).getName() << "_"
+                    << iPts << " ";
+            }
+        }
+        _optLog << endl;
     }
 
     ~FelisCatusOptimizerSystem()
@@ -183,7 +194,7 @@ public:
         {
             _optLog << " " << parameters[i];
         }
-        _optLog << endl;
+        _optLog << " " << f << endl;
 
         // Print out to the terminal/console every so often.
         if (_objectiveCalls % 100 == 0)
@@ -202,6 +213,8 @@ public:
     }
 
     int getObjectiveCalls() const { return _objectiveCalls; }
+
+    void printModel(string filename) { _cat.print(filename); }
 
 private:
 
