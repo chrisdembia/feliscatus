@@ -130,7 +130,7 @@ public:
         // Increment the number of calls to this function.
         _objectiveCalls++;
 
-        // Unpack parameters into the model.
+        // Unpack parameters into the model: update spline points.
         for (int i = 0; i < _numActuators; i++)
         {
             for (int j = 0; j < _numOptimSplinePoints; j++)
