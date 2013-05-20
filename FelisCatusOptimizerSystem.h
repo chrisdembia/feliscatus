@@ -82,9 +82,7 @@ public:
 #endif
 
         // Create a log.
-        _optLog.open(
-                (_name + "/" + _name + ".txt").c_str(),
-                ofstream::out);
+        _optLog.open((_name + "/" + _name + ".txt").c_str(), ofstream::out);
         _optLog << "Felis Catus optimization log." << endl;
         time_t rawtime; time(&rawtime);
         _optLog << ctime(&rawtime);

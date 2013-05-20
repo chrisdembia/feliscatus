@@ -13,6 +13,57 @@ using std::string;
 using SimTK::Optimizer;
 
 /**
+ * Manages inputs to an optimization of cat-flipping via OpenSim's
+ * serialization/XML abilities. This is NOT an AbstractTool.
+ * */
+
+namespace OpenSim
+{
+
+class FelisCatusOptimizerTool : public Object {
+OpenSim_DECLARE_CONCRETE_OBJECT(FelisCatusOptimizerTool, Object);
+public:
+    OpenSim_DECLARE_PROPERTY(results_directory, string,
+            "Directory in which to save optimization log and results.");
+    OpenSim_DECLARE_PROPERTY(model_filename, string,
+            "Specifies path to model file, WITH .osim extension.");
+    /*
+    OpenSim_DECLARE_PROPERTY(initial_parameters, FunctionSet,
+            "FunctionSet of SimmSpline's used to initialize optimization
+            parameters. Be careful -- we do not do any error checking.")
+            */
+
+    // TODO
+    FelisCatusOptimizerTool() : Object()
+    {
+        setNull();
+        constructProperties();
+    }
+
+    // TODO
+    FelisCatusOptimizerTool(const string &aFileName, bool
+            aUpdateFromXMLNode=true) : Object(aFileName, aUpdateFromXMLNode)
+    {
+        setNull();
+        constructProperties();
+        updateFromXMLDocument();
+    }
+
+    void setNull() { }
+
+    void constructProperties()
+    {
+        constructProperty_results_directory("results");
+        constructProperty_model_filename("");
+    }
+
+};
+
+}
+
+using OpenSim::FelisCatusOptimizerTool;
+
+/**
  * Creates a FelisCatusOptimizerSystem and then optimizes it. Prints out an
  * osim file of the cat model (with controls) that results from the
  * optimization, as well as an XML file containing all the splines used for
@@ -25,17 +76,22 @@ int main(int argc, char * argv[])
     //      exectuable as well. Thus, it'll always be greater than/equal to 1.
     // argv is an array of space-delimited command line inputs, the first one
     //      necessarily being the name of the executable.
-    string help = "User must provide the following inputs:\n\n\t"
-                  "1: name of cat model file, WITHOUT .osim extension,\n\t"
-                  "2: name of the run; a directory with this name is created.\n"
-                  "\nExample:\n\t"
-                  "optimize feliscatus_flexTwistRetractLegs testRun\n";
-    if (argc == 3)
+    string help = "Must specify the name of a FelisCatusOptimizerTool "
+                  "serialization (setup/input file).\n\nExamples:\n\t"
+                  "optimize testRun/feliscatus_setup.xml\n\t"
+                  "..\\optimize feliscatus_setup.xml [windows]\n";
+
+    if (argc == 2)
     { // Correct number of inputs.
-        string modelFileName = argv[1];
-        string name = argv[2];
-        FelisCatusOptimizerSystem sys(name, modelFileName + ".osim");
-        // TODO allow input of number of spline points.
+
+        // Parse inputs using the Tool class.
+        string toolSetupFile = argv[1];
+        FelisCatusOptimizerTool tool(toolSetupFile);
+        cout << "mfile " << tool.get_model_filename() << endl;
+        string name = tool.get_results_directory();
+
+        // Use inputs to create the optimizer system.
+        FelisCatusOptimizerSystem sys(name, tool.get_model_filename());
 
         // Create the optimizer with our system.
         Optimizer opt(sys, SimTK::InteriorPoint);
@@ -53,11 +109,11 @@ int main(int argc, char * argv[])
         double f = opt.optimize(initParameters);
 
         // Print the optimized model so we can explore the resulting motion.
-        sys.printModel(modelFileName + "_" + name + "_" + "opt.osim");
+        sys.printModel(name + "_" + "optimized.osim");
 
         // Print the control splines so we can explore the resulting actuation.
         sys.printPrescribedControllerFunctionSet(
-                modelFileName + "_" + name + "_" + "opt_splines.xml");
+                name + "_" + "optimized_splines.xml");
 
         cout << "Done!" << endl;
     }
