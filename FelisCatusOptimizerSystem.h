@@ -191,21 +191,9 @@ public:
             flipController->prescribeControlForActuator(i, _splines[i]);
         }
 
-        // Set parameter limits from the actuator torque limits in the model.
-        Vector lowerLimits(getNumParameters(), 0.0);
-        Vector upperLimits(getNumParameters(), 0.0);
-        for (int iAct = 0; iAct < _numActuators; iAct++)
-        {
-            // Max/min for all spline points for the i-th actuator.
-            double minControl = _cat.getActuators().get(iAct).getMinControl();
-            double maxControl = _cat.getActuators().get(iAct).getMaxControl();
-            for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
-            {
-                int paramIndex = iAct * _numOptimSplinePoints + iPts;
-                lowerLimits[paramIndex] = minControl;
-                upperLimits[paramIndex] = maxControl;
-            }
-        }
+        // Set (nondimensional) parameter limits.
+        Vector lowerLimits(getNumParameters(), -1.0);
+        Vector upperLimits(getNumParameters(), 1.0);
         setParameterLimits(lowerLimits, upperLimits);
 
         // Create a header row in the log.
@@ -285,10 +273,29 @@ public:
         // Unpack parameters into the model: update spline points.
         for (int iAct = 0; iAct < _numActuators; iAct++)
         {
+            // Max/min for all spline points for the i-th actuator.
+            double minControl = _cat.getActuators().get(iAct).getMinControl();
+            double maxControl = _cat.getActuators().get(iAct).getMaxControl();
+
+            // Visit each point in this spline.
             for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
             {
                 int paramIndex = iAct * _numOptimSplinePoints + iPts;
-                _splines[iAct]->setY(iPts, parameters[paramIndex]);
+
+                // Dimensional control value.
+                double dimControlValue;
+
+                if (parameters[paramIndex] < 0)
+                { // parameter and minControl are both neg; must negate again.
+                    dimControlValue = -minControl * parameters[paramIndex];
+                }
+                else
+                {
+                    dimControlValue = maxControl * parameters[paramIndex];
+                }
+
+                // Finally, edit the spline with the info from parameters.
+                _splines[iAct]->setY(iPts, dimControlValue);
             }
         }
 
