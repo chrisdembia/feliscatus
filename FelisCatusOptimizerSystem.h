@@ -45,6 +45,8 @@ namespace OpenSim
 // TODO input is which terms to use in objective function.
 // TODO normalize time
 // TODO normalize max/min control.
+// TODO move manager code outside of the objective function loop if possible.
+// TODO figure out how to space out control points over time.
 
 /**
  * Manages inputs to an optimization of cat-flipping via OpenSim's
@@ -72,8 +74,9 @@ public:
             "that are actually used in the simulation are equally spaced from "
             "t = 0 to t = duration, and there should be as many points in each "
             "function as given by the num_optim_spline_points property. y "
-            "values should be between -1 and 1. Be careful; we do not do any "
-            "error checking.")
+            "values should be nondimensional and between -1 and 1. NOTE the "
+            "output optimized splines are NOT NONDIMENSIONAL. Be careful; we "
+            "do not do any error checking.")
 
     FelisCatusOptimizerTool() : Object()
     {
@@ -103,9 +106,6 @@ public:
 };
 
 }
-
-// TODO move manager code outside of the objective function loop if possible.
-// TODO figure out how to space out control points over time.
 
 /**
  * Finds a control input/trajectory that achieves certain desired
@@ -367,15 +367,17 @@ public:
     /// @brief Prints the current model to the given file name.
     /// The file will be located in the directory containing the log file
     /// for this optimization run.
-    void printModel(string filename) { _cat.print(_name + "/" + filename); }
+    void printModel(string filename) const
+    {
+        _cat.print(_name + "/" + filename);
+    }
 
     /// @brief Serializes the current set of functions used for the actuators.
     /// The file will be located in the directory containing the log file
     /// for this optimization run.
-    void printPrescribedControllerFunctionSet(string filename)
+    void printPrescribedControllerFunctionSet(string filename) const
     {
-        // Must use FunctionSet because serialization of the template Set< >
-        // gives a corrupt (?) serialization.
+        // Create the FunctionSet that we'll then serialize.
         FunctionSet fset;
         fset.setSize(_splines.size());
         for (int iFcn = 0; iFcn < _splines.size(); iFcn++)
