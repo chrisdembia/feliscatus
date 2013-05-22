@@ -142,10 +142,15 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 
 ADD_EXECUTABLE(optimize
     optimize.cpp
-    FelisCatusModeling.h
     FelisCatusOptimizerSystem.h
     )
 TARGET_LINK_LIBRARIES(optimize ${OSIM_LIBRARIES})
+
+ADD_EXECUTABLE(optimizer_tool_template
+    optimizer_tool_template.cpp
+    FelisCatusOptimizerSystem.h
+    )
+TARGET_LINK_LIBRARIES(optimizer_tool_template ${OSIM_LIBRARIES})
 	
 # ----- Old script stuff for reference.
 
