@@ -66,10 +66,19 @@ public:
             "Constant across all splines. If an initial_parameters_filename is "
             "provided, the functions specified in that file must have the "
             "correct number of points. We do not error-check for this.");
+    OpenSim_DECLARE_PROPERTY(optimize_deviation_from_anterior_legs_down, bool,
+            "Adds a term to the objective to minimize (hunch - Pi)");
+    OpenSim_DECLARE_PROPERTY(optimize_deviation_from_posterior_legs_down, bool,
+            "Adds a term to the objective to minimize (twist - 0.0)");
+    OpenSim_DECLARE_PROPERTY(optimize_deviation_from_sagittal_symmetry, bool,
+            "Adds a term to the objective to minimize (hunch - 2 * pitch)");
+
     OpenSim_DECLARE_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
             "optimization parameters. If not provided, initial parameters are "
-            "all 0.0. The name of each function must be identical to that of "
+            "all 0.0, and this element must be DELETED from the XML file "
+            "(cannot just leave it blank). The name of each function must be "
+            "identical to that of "
             "the actuator it is for. x values are ignored. The time values "
             "that are actually used in the simulation are equally spaced from "
             "t = 0 to t = duration, and there should be as many points in each "
@@ -100,6 +109,9 @@ public:
         constructProperty_model_filename("");
         constructProperty_duration(1.0);
         constructProperty_num_optim_spline_points(5);
+        constructProperty_optimize_deviation_from_anterior_legs_down(true);
+        constructProperty_optimize_deviation_from_posterior_legs_down(true);
+        constructProperty_optimize_deviation_from_sagittal_symmetry(true);
         constructProperty_initial_parameters_filename("");
     }
 
@@ -330,10 +342,20 @@ public:
         double twist = coordinates.get("twist").getValue(aState);
 		double hunch = coordinates.get("hunch").getValue(aState);
 		double pitch = coordinates.get("pitch").getValue(aState);
-        double deviationFromLegsDown = pow(roll - Pi, 2) + pow(twist, 2);
-		double deviationFromSymmetry = pow(hunch - 2 * pitch, 2);
         // ====================================================================
-        f = deviationFromLegsDown + deviationFromSymmetry;
+        f = 0;
+        if (_tool.get_optimize_deviation_from_anterior_legs_down())
+        {
+            f += pow(roll - Pi, 2);
+        }
+        if (_tool.get_optimize_deviation_from_posterior_legs_down())
+        {
+            f += pow(twist - 0.0, 2);
+        }
+        if (_tool.get_optimize_deviation_from_sagittal_symmetry())
+        {
+            f += pow(hunch - 2 * pitch, 2);
+        }
         // ====================================================================
 
         // Update the log.

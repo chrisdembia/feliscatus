@@ -22,7 +22,7 @@ using OpenSim::FelisCatusOptimizerTool;
  * */
 int main(int argc, char * argv[])
 {
-    // Figure out from the user which cat model to use.
+    // Get the filename of the FelisCatusOptimizerTool serialization.
     // argc is the number of command line inputs, INCLUDING the name of the
     //      exectuable as well. Thus, it'll always be greater than/equal to 1.
     // argv is an array of space-delimited command line inputs, the first one
@@ -54,16 +54,31 @@ int main(int argc, char * argv[])
         Vector initParameters = sys.initialParameters();
 
         // And we're off!
-        double f = opt.optimize(initParameters);
+        try
+        {
+            double f = opt.optimize(initParameters);
 
-        // Print the optimized model so we can explore the resulting motion.
-        sys.printModel(name + "_" + "optimized.osim");
+            // Print the optimized model so we can explore the resulting motion.
+            sys.printModel(name + "_optimized.osim");
 
-        // Print the control splines so we can explore the resulting actuation.
-        sys.printPrescribedControllerFunctionSet(
-                name + "_" + "optimized_parameters.xml");
+            // Print the control splines so we can explore the resulting actuation.
+            sys.printPrescribedControllerFunctionSet(
+                    name + "_optimized_parameters.xml");
 
-        cout << "Done! f = " << f << endl;
+            cout << "Done! f = " << f << endl;
+        }
+        catch (...)
+        {
+            // Print the last model so we have something to look at.
+            sys.printModel(name + "_last.osim");
+            sys.printPrescribedControllerFunctionSet(
+                    name + "_last_parameters.xml");
+
+            cout << "Exception thrown; optimization not achieved." << endl;
+
+            // Don't want to give the appearance of normal operation.
+            throw;
+        }
     }
     else
     { // Too few/many inputs, etc.
