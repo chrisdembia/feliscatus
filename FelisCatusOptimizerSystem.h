@@ -1,7 +1,7 @@
-
 #ifndef FELISCATUSOPTIMIZERSYSTEM_H
 #define FELISCATUSOPTIMIZERSYSTEM_H
 
+#include <math.h>
 #include <stdio.h>
 // For mkdir:
 #if defined(_WIN32)
@@ -23,6 +23,7 @@ using std::ofstream;
 using std::string;
 using std::vector;
 
+using OpenSim::Array;
 using OpenSim::CoordinateSet;
 using OpenSim::FunctionSet;
 using OpenSim::Manager;
@@ -37,6 +38,61 @@ using SimTK::Real;
 using SimTK::Stage;
 using SimTK::State;
 using SimTK::Vector;
+
+namespace OpenSim
+{
+
+// TODO input is which terms to use in objective function.
+// TODO normalize time
+// TODO normalize max/min control.
+
+/**
+ * Manages inputs to an optimization of cat-flipping via OpenSim's
+ * serialization/XML abilities. This is NOT an AbstractTool.
+ * */
+class FelisCatusOptimizerTool : public Object {
+OpenSim_DECLARE_CONCRETE_OBJECT(FelisCatusOptimizerTool, Object);
+public:
+    OpenSim_DECLARE_PROPERTY(results_directory, string,
+            "Directory in which to save optimization log and results.");
+    OpenSim_DECLARE_PROPERTY(model_filename, string,
+            "Specifies path to model file, WITH .osim extension.");
+    OpenSim_DECLARE_PROPERTY(initial_parameters_filename, string,
+            "File containing FunctionSet of SimmSpline's used to initialize "
+            "optimization parameters. If not provided, initial parameters are "
+            "all 0.0. The name of each function must be identical to that of "
+            "the actuator it is for. x values should be between 0 and 1, "
+            "equally spaced, and there should be as many points in each "
+            "function as given by the num_optim_spline_points property. y "
+            "values should be between -1 and 1. Be careful; we do not do any "
+            "error checking.")
+
+    FelisCatusOptimizerTool() : Object()
+    {
+        setNull();
+        constructProperties();
+    }
+
+    FelisCatusOptimizerTool(const string &aFileName, bool
+            aUpdateFromXMLNode=true) : Object(aFileName, aUpdateFromXMLNode)
+    {
+        setNull();
+        constructProperties();
+        updateFromXMLDocument();
+    }
+
+    void setNull() { }
+
+    void constructProperties()
+    {
+        constructProperty_results_directory("results");
+        constructProperty_model_filename("");
+        constructProperty_initial_parameters_filename("");
+    }
+
+};
+
+}
 
 // TODO move manager code outside of the objective function loop if possible.
 // TODO figure out how to space out control points over time.
@@ -57,36 +113,35 @@ class FelisCatusOptimizerSystem : public OptimizerSystem
 {
 public:
     /**
-     * @param name Name of the run. We create a log file using this name.
-     * @param modelFileName An OpenSim model filename of a model possessing the
-     *      qualities described in this class' description.
-     * @param numOptimSplinePoints The number of points (optimization parameters)
-     *      for each spline. The total number of optimization parameters will
-     *      be numSplinePoints * (# of actuators in model). There could be
-     *      additional spline points (perhaps the first one?) that are NOT
-     *      optimized for.
+     * @param tool Contains all necessary input information.
      * */
-    FelisCatusOptimizerSystem(string name,
-            string modelFileName,
-            int numOptimSplinePoints=5) :
-        _name(name),
-        _cat(Model(modelFileName)),
-        _numOptimSplinePoints(numOptimSplinePoints),
-        _objectiveCalls(0)
+    FelisCatusOptimizerSystem(OpenSim::FelisCatusOptimizerTool & tool) :
+        _tool(tool),
+        _numOptimSplinePoints(5),
+        _objectiveCalls(0),
+        _objectiveFcnValueBestYet(SimTK::Infinity)
     {
+        // Parse inputs.
+        _name = _tool.get_results_directory();
+        _cat = Model(_tool.get_model_filename());
+
         // Create a directory for all the output files we'll create.
 #if defined(_WIN32)
-        _mkdir(name.c_str());
+        _mkdir(_name.c_str());
 #else
-        mkdir(name.c_str(), 0777);
+        mkdir(_name.c_str(), 0777);
 #endif
 
+        // Serialize what we just deserialized, in the results dir.
+        // To keep everything in one nice organized place.
+        _tool.print(_name + "/" + _name + "_setup.xml");
+
         // Create a log.
-        _optLog.open((_name + "/" + _name + ".txt").c_str(), ofstream::out);
+        _optLog.open((_name + "/" + _name + "_log.txt").c_str(), ofstream::out);
         _optLog << "Felis Catus optimization log." << endl;
         time_t rawtime; time(&rawtime);
         _optLog << ctime(&rawtime);
-        _optLog << "Model file name: " << modelFileName << endl;
+        _optLog << "Model file name: " << _tool.get_model_filename() << endl;
 
         // Compute the number of optimization parameters we'll have.
         _numActuators = _cat.getActuators().getSize();
@@ -110,7 +165,7 @@ public:
             _splines.push_back(new SimmSpline());
 
             // Name this spline with the name of the corresponding actuator.
-            _splines[i]->setName(_cat.getActuators().get(i).getName() + "_fcn");
+            _splines[i]->setName(_cat.getActuators().get(i).getName());
 
             // Add the correct number of points to this spline.
             for (int j = 0; j < _numOptimSplinePoints; j++)
@@ -140,6 +195,9 @@ public:
         setParameterLimits(lowerLimits, upperLimits);
 
         // Create a header row in the log.
+        _optLog << "objective_calls " <<
+            "objective_fcn_value " <<
+            "objective_fcn_value_best_yet ";
         for (int iAct = 0; iAct < _numActuators; iAct++)
         {
             for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
@@ -148,7 +206,54 @@ public:
                     << iPts << " ";
             }
         }
-        _optLog << "objective_function" << endl;
+        _optLog << endl;
+    }
+
+    /**
+     * With knowledge from the FelisCatusOptimizerTool, provides what should be
+     * used as the initial parameters. If the tool's
+     * initial_parameters_filename is empty, then the initial parameters are
+     * set to 0.0.
+     * */
+    Vector initialParameters()
+    {
+        Vector initParams(getNumParameters(), 0.0);
+
+        if (_tool.get_initial_parameters_filename() != "")
+        { // A file is specified.
+            // Deserialize the specified XML file.
+            FunctionSet initFcns(_tool.get_initial_parameters_filename());
+
+            // Write a copy of the FunctionSet to the results directory.
+            initFcns.print(_name + "/" + _name + "_initial_parameters.xml");
+
+            Array<string> initNames;
+            initFcns.getNames(initNames);
+
+            // This loop is set up so that, hopefully, the initFcns set's
+            // functions do not need to be ordered in the same way as the
+            // optimization parameters are.
+            for (int iFcn = 0; iFcn < initNames.getSize(); iFcn++)
+            { // Loop through each init function by name.
+
+                // Get index in the model of the actuator with this name.
+                int iAct = _cat.getActuators().getIndex(initNames[iFcn]);
+
+                // Get access to the spline's methods.
+                SimmSpline * fcn =
+                    dynamic_cast<SimmSpline *>(&initFcns.get(iAct));
+
+                for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
+                {
+                    // Find the right index in the optimization parameters.
+                    int paramIndex = iAct * _numOptimSplinePoints + iPts;
+
+                    // Finally, transfer y value from input to init parameters.
+                    initParams[paramIndex] = fcn->getY(iPts);
+                }
+            }
+        }
+        return initParams;
     }
 
     ~FelisCatusOptimizerSystem()
@@ -211,12 +316,14 @@ public:
         // ====================================================================
 
         // Update the log.
-        _optLog << _objectiveCalls;
+        _objectiveFcnValueBestYet = std::min(f, _objectiveFcnValueBestYet);
+        _optLog << _objectiveCalls << " " << f <<
+            " " <<  _objectiveFcnValueBestYet;
         for (int i = 0; i < parameters.size(); i++)
         {
             _optLog << " " << parameters[i];
         }
-        _optLog << " " << f << endl;
+        _optLog << endl;
 
         // Print out to the terminal/console every so often.
         if (_objectiveCalls % 100 == 0)
@@ -262,6 +369,9 @@ private:
     /// See constructor.
     string _name;
 
+    /// See constructor.
+    OpenSim::FelisCatusOptimizerTool & _tool;
+
     /// The model containing the attributes described in this class'
     /// description.
     mutable Model _cat;
@@ -283,6 +393,10 @@ private:
 
     /// To record details of this run.
     mutable ofstream _optLog;
+
+    /// The best (lowest) value of the objective function, for logging.
+    mutable double _objectiveFcnValueBestYet;
+
 };
 
 #endif
