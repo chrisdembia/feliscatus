@@ -57,12 +57,20 @@ public:
             "Directory in which to save optimization log and results.");
     OpenSim_DECLARE_PROPERTY(model_filename, string,
             "Specifies path to model file, WITH .osim extension.");
+    OpenSim_DECLARE_PROPERTY(duration, double,
+            "Duration of forward dynamics simulation (seconds).");
+    OpenSim_DECLARE_PROPERTY(num_optim_spline_points, int,
+            "Number of points being optimized in each spline function. "
+            "Constant across all splines. If an initial_parameters_filename is "
+            "provided, the functions specified in that file must have the "
+            "correct number of points. We do not error-check for this.");
     OpenSim_DECLARE_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
             "optimization parameters. If not provided, initial parameters are "
             "all 0.0. The name of each function must be identical to that of "
-            "the actuator it is for. x values should be between 0 and 1, "
-            "equally spaced, and there should be as many points in each "
+            "the actuator it is for. x values are ignored. The time values "
+            "that are actually used in the simulation are equally spaced from "
+            "t = 0 to t = duration, and there should be as many points in each "
             "function as given by the num_optim_spline_points property. y "
             "values should be between -1 and 1. Be careful; we do not do any "
             "error checking.")
@@ -87,6 +95,8 @@ public:
     {
         constructProperty_results_directory("results");
         constructProperty_model_filename("");
+        constructProperty_duration(1.0);
+        constructProperty_num_optim_spline_points(5);
         constructProperty_initial_parameters_filename("");
     }
 
@@ -117,13 +127,13 @@ public:
      * */
     FelisCatusOptimizerSystem(OpenSim::FelisCatusOptimizerTool & tool) :
         _tool(tool),
-        _numOptimSplinePoints(5),
         _objectiveCalls(0),
         _objectiveFcnValueBestYet(SimTK::Infinity)
     {
         // Parse inputs.
         _name = _tool.get_results_directory();
         _cat = Model(_tool.get_model_filename());
+        _numOptimSplinePoints = _tool.get_num_optim_spline_points();
 
         // Create a directory for all the output files we'll create.
 #if defined(_WIN32)
@@ -159,6 +169,8 @@ public:
         _cat.addController(flipController);
 
         // Create SimmSpline's for each actuator.
+        double indexToTimeInSeconds =
+            _tool.get_duration() / (double)(_numOptimSplinePoints - 1);
         for (int i = 0; i < _numActuators; i++)
         {
             // Create a function for this actuator.
@@ -169,8 +181,10 @@ public:
 
             // Add the correct number of points to this spline.
             for (int j = 0; j < _numOptimSplinePoints; j++)
-            { // TODO change times from index to something reasonable.
-                _splines[i]->addPoint((double)j, 0.0);
+            {
+                // Scale the time points appropriately.
+                double thisTime = (double)j * indexToTimeInSeconds;
+                _splines[i]->addPoint(thisTime, 0.0);
             }
 
             // Tell the controller about this function.
@@ -293,7 +307,7 @@ public:
 
         // Integrate from initial time to final time
         manager.setInitialTime(0);
-        manager.setFinalTime(5.0);
+        manager.setFinalTime(_tool.get_duration());
         // TODO change this initial time; penalize for taking too long.
 
         // --------------------------------------------------------------------
