@@ -107,32 +107,11 @@ ADD_MODEL_EXECUTABLE(model_kanescherfig3)
 # Combining figures 2 and 3.
 ADD_MODEL_EXECUTABLE(model_kaneschercombined)
 
-# Building up complexity, one degree-of-freedom at a time...
+# Creating all models in "model tree" with one executable
 # NOTE: Without any internal actuation, the model has no chance of flipping.
 # ----  For this reason, there are no completely rigid models (just body or
 #	body + legs).
-# Flex.
-ADD_MODEL_EXECUTABLE(model_flex)
-# Twist.
-ADD_MODEL_EXECUTABLE(model_twist)
-# Flex and twist.
-ADD_MODEL_EXECUTABLE(model_flexTwist)
-
-# Flex with rigid legs.
-ADD_MODEL_EXECUTABLE(model_flexRigidLegs)
-# Twist with rigid legs.
-ADD_MODEL_EXECUTABLE(model_twistRigidLegs)
-# Flex and twist with rigid legs.
-ADD_MODEL_EXECUTABLE(model_flexTwistRigidLegs)
-
-# Retractable legs.
-ADD_MODEL_EXECUTABLE(model_retractLegs)
-# Flex with retractable legs.
-ADD_MODEL_EXECUTABLE(model_flexRetractLegs)
-# Twist with retractable legs.
-ADD_MODEL_EXECUTABLE(model_twistRetractLegs)
-# Flex and twist with retractable legs.
-ADD_MODEL_EXECUTABLE(model_flexTwistRetractLegs)
+ADD_MODEL_EXECUTABLE(modelTree)
 
 SET(SIMULATE_EXEC_NAME simulate)
 ADD_EXECUTABLE(${SIMULATE_EXEC_NAME} simulate.cpp)
