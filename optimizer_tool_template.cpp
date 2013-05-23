@@ -20,10 +20,10 @@ int main(int argc, char * argv[])
     tool.set_model_filename("");
     tool.set_duration(1.0);
     tool.set_num_optim_spline_points(5);
-    tool.set_optimize_anterior_legs_down(true);
-    tool.set_optimize_posterior_legs_down(true);
-    tool.set_optimize_sagittal_symmetry(true);
-    tool.set_optimize_legs_prepared_for_landing(true);
+    tool.set_anterior_legs_down_weight(1.0);
+    tool.set_posterior_legs_down_weight(1.0);
+    tool.set_sagittal_symmetry_weight(1.0);
+    tool.set_legs_prepared_for_landing_weight(1.0);
     tool.set_initial_parameters_filename("");
     tool.print(filename);
 

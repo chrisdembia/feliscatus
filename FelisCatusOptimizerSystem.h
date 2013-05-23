@@ -66,16 +66,16 @@ public:
             "Constant across all splines. If an initial_parameters_filename is "
             "provided, the functions specified in that file must have the "
             "correct number of points. We do not error-check for this.");
-    OpenSim_DECLARE_PROPERTY(optimize_anterior_legs_down, bool,
+    OpenSim_DECLARE_PROPERTY(anterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
             "(hunch - Pi) and related speeds.");
-    OpenSim_DECLARE_PROPERTY(optimize_posterior_legs_down, bool,
+    OpenSim_DECLARE_PROPERTY(posterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
             "(twist - 0.0) and related speeds");
-    OpenSim_DECLARE_PROPERTY(optimize_sagittal_symmetry, bool,
+    OpenSim_DECLARE_PROPERTY(sagittal_symmetry_weight, double,
             "Adds a term to the objective to minimize final value of "
             "(hunch - 2 * pitch)");
-    OpenSim_DECLARE_PROPERTY(optimize_legs_prepared_for_landing, bool,
+    OpenSim_DECLARE_PROPERTY(legs_prepared_for_landing_weight, double,
             "Adds terms to the objective to minimize final value of "
             "frontLegs, backLegs, and related speeds.");
 
@@ -115,10 +115,10 @@ public:
         constructProperty_model_filename("");
         constructProperty_duration(1.0);
         constructProperty_num_optim_spline_points(5);
-        constructProperty_optimize_anterior_legs_down(true);
-        constructProperty_optimize_posterior_legs_down(true);
-        constructProperty_optimize_sagittal_symmetry(true);
-        constructProperty_optimize_legs_prepared_for_landing(true);
+        constructProperty_anterior_legs_down_weight(1.0);
+        constructProperty_posterior_legs_down_weight(1.0);
+        constructProperty_sagittal_symmetry_weight(1.0);
+        constructProperty_legs_prepared_for_landing_weight(1.0);
         constructProperty_initial_parameters_filename("");
     }
 
@@ -355,19 +355,21 @@ public:
 		double pitch = coordinates.get("pitch").getValue(aState);
         // ====================================================================
         f = 0;
-        if (_tool.get_optimize_anterior_legs_down())
+        if (_tool.get_anterior_legs_down_weight() != 0.0)
         {
-            f += pow(roll - Pi, 2) + pow(rollRate, 2) + pow(rollAccel, 2);
+            f += _tool.get_anterior_legs_down_weight() * (
+                pow(roll - Pi, 2) + pow(rollRate, 2) + pow(rollAccel, 2));
         }
-        if (_tool.get_optimize_posterior_legs_down())
+        if (_tool.get_posterior_legs_down_weight() != 0.0)
         {
-            f += pow(twist - 0.0, 2) + pow(twistRate, 2) + pow(twistAccel, 2);
+            f += _tool.get_posterior_legs_down_weight() * (
+                pow(twist - 0.0, 2) + pow(twistRate, 2) + pow(twistAccel, 2));
         }
-        if (_tool.get_optimize_sagittal_symmetry())
+        if (_tool.get_sagittal_symmetry_weight() != 0.0)
         {
-            f += pow(hunch + 2 * pitch, 2);
+            f += _tool.get_sagittal_symmetry_weight() * (pow(hunch + 2 * pitch, 2));
         }
-        if (_tool.get_optimize_legs_prepared_for_landing())
+        if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
         {   
             // These values may not be available for all models.
             double frontLegs = coordinates.get("frontLegs").getValue(aState);
@@ -376,8 +378,10 @@ public:
             double backLegs = coordinates.get("backLegs").getValue(aState);
             double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
             double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
-            f += pow(frontLegs, 2) + pow(frontLegsRate, 2) + pow(frontLegsAccel, 2);
-            f += pow(backLegs, 2) + pow(backLegsRate, 2) + pow(backLegsAccel, 2);
+            f += _tool.get_legs_prepared_for_landing_weight() * (
+                pow(frontLegs, 2) + pow(frontLegsRate, 2) + pow(frontLegsAccel, 2));
+            f += _tool.get_legs_prepared_for_landing_weight() * (
+                pow(backLegs, 2) + pow(backLegsRate, 2) + pow(backLegsAccel, 2));
         }
         // ====================================================================
 
