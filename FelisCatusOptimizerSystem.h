@@ -365,7 +365,7 @@ public:
         }
         if (_tool.get_optimize_sagittal_symmetry())
         {
-            f += pow(hunch - 2 * pitch, 2);
+            f += pow(hunch + 2 * pitch, 2);
         }
         if (_tool.get_optimize_legs_prepared_for_landing())
         {   
