@@ -120,14 +120,14 @@ protected:
         anteriorBody = new Body();
         anteriorBody->setName("anteriorBody");
         anteriorBody->setMass(segmentalMass);
-        anteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0, 0));
+        anteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0, 0));
         anteriorBody->setInertia(segmentalInertia);
 
         // Posterior half of cat.
         posteriorBody = new Body();
         posteriorBody->setName("posteriorBody");
         posteriorBody->setMass(segmentalMass);
-        posteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0, 0));
+        posteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0, 0));
         posteriorBody->setInertia(segmentalInertia);
 
 		// Legs.
@@ -233,7 +233,6 @@ protected:
         posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
                 posteriorDisplay);
         posteriorBody->updDisplayer()->setShowAxes(true);
-
 
 		// Legs.
 		DisplayGeometry * anteriorLegsDisplay = 
