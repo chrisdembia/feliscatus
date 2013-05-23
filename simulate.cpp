@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     manager.setInitialTime(0);
     manager.setFinalTime(5.0);
 
-    // TODO manager.integrate(initState);
+    manager.integrate(initState);
 
     // Memory management.
 
