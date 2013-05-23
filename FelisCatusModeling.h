@@ -120,14 +120,14 @@ protected:
         anteriorBody = new Body();
         anteriorBody->setName("anteriorBody");
         anteriorBody->setMass(segmentalMass);
-        anteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0, 0));
+        anteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0, 0));
         anteriorBody->setInertia(segmentalInertia);
 
         // Posterior half of cat.
         posteriorBody = new Body();
         posteriorBody->setName("posteriorBody");
         posteriorBody->setMass(segmentalMass);
-        posteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0, 0));
+        posteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0, 0));
         posteriorBody->setInertia(segmentalInertia);
 
 		// Legs.
@@ -204,32 +204,36 @@ protected:
 
         // Anterior body.
         DisplayGeometry * anteriorDisplay = 
-            new DisplayGeometry("sphere.vtp");
+            new DisplayGeometry("cylinder.vtp");
 		//            "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
         anteriorDisplay->setOpacity(0.5);
         anteriorDisplay->setColor(Vec3(0.5, 0.5, 0.5));
         Rotation rot;
-        rot.setRotationFromAngleAboutY(Pi);
-        anteriorDisplay->setTransform(Transform(rot));
+        rot.setRotationFromAngleAboutZ(0.5 * Pi);
+        anteriorDisplay->setTransform(
+            Transform(rot,  Vec3(0.5 * segmentalLength, 0, 0)));
+        anteriorDisplay->setScaleFactors(
+                Vec3(segmentalDiam, segmentalLength, segmentalDiam));
 
         anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
                 anteriorDisplay);
         anteriorBody->updDisplayer()->setShowAxes(true);
-		anteriorBody->updDisplayer()->setScaleFactors(
-                Vec3(segmentalLength, segmentalDiam, segmentalDiam));
-
+		
         // Posterior body.
         DisplayGeometry * posteriorDisplay = 
-            new DisplayGeometry("sphere.vtp");
+            new DisplayGeometry("cylinder.vtp");
 		//            "feliscatus_cylinder_with_two_offset_feet_nubs.obj");
         posteriorDisplay->setOpacity(0.5);
         posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
+        posteriorDisplay->setTransform(
+            Transform(rot,  Vec3(-0.5 * segmentalLength, 0, 0)));
+        posteriorDisplay->setScaleFactors(
+                Vec3(segmentalDiam, segmentalLength, segmentalDiam));
 
         posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(
                 posteriorDisplay);
         posteriorBody->updDisplayer()->setShowAxes(true);
-		posteriorBody->updDisplayer()->setScaleFactors(
-                Vec3(segmentalLength, segmentalDiam, segmentalDiam));
+
 
 		// Legs.
 		DisplayGeometry * anteriorLegsDisplay = 
