@@ -3,7 +3,7 @@
 
 #include <math.h>
 #include <stdio.h>
-// For mkdir:
+// For mkdir platform dependence:
 #if defined(_WIN32)
 #include <direct.h>
 #else
@@ -66,12 +66,18 @@ public:
             "Constant across all splines. If an initial_parameters_filename is "
             "provided, the functions specified in that file must have the "
             "correct number of points. We do not error-check for this.");
-    OpenSim_DECLARE_PROPERTY(optimize_deviation_from_anterior_legs_down, bool,
-            "Adds a term to the objective to minimize (hunch - Pi)");
-    OpenSim_DECLARE_PROPERTY(optimize_deviation_from_posterior_legs_down, bool,
-            "Adds a term to the objective to minimize (twist - 0.0)");
-    OpenSim_DECLARE_PROPERTY(optimize_deviation_from_sagittal_symmetry, bool,
-            "Adds a term to the objective to minimize (hunch - 2 * pitch)");
+    OpenSim_DECLARE_PROPERTY(optimize_anterior_legs_down, bool,
+            "Adds terms to the objective to minimize final value of "
+            "(hunch - Pi) and related speeds.");
+    OpenSim_DECLARE_PROPERTY(optimize_posterior_legs_down, bool,
+            "Adds terms to the objective to minimize final value of "
+            "(twist - 0.0) and related speeds");
+    OpenSim_DECLARE_PROPERTY(optimize_sagittal_symmetry, bool,
+            "Adds a term to the objective to minimize final value of "
+            "(hunch - 2 * pitch)");
+    OpenSim_DECLARE_PROPERTY(optimize_legs_prepared_for_landing, bool,
+            "Adds terms to the objective to minimize final value of "
+            "frontLegs, backLegs, and related speeds.");
 
     OpenSim_DECLARE_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
@@ -109,9 +115,10 @@ public:
         constructProperty_model_filename("");
         constructProperty_duration(1.0);
         constructProperty_num_optim_spline_points(5);
-        constructProperty_optimize_deviation_from_anterior_legs_down(true);
-        constructProperty_optimize_deviation_from_posterior_legs_down(true);
-        constructProperty_optimize_deviation_from_sagittal_symmetry(true);
+        constructProperty_optimize_anterior_legs_down(true);
+        constructProperty_optimize_posterior_legs_down(true);
+        constructProperty_optimize_sagittal_symmetry(true);
+        constructProperty_optimize_legs_prepared_for_landing(true);
         constructProperty_initial_parameters_filename("");
     }
 
@@ -339,22 +346,38 @@ public:
         _cat.getMultibodySystem().realize(aState, Stage::Acceleration);
         const CoordinateSet& coordinates = _cat.getCoordinateSet();
         double roll = coordinates.get("roll").getValue(aState);
+        double rollRate = coordinates.get("roll").getSpeedValue(aState);
+        double rollAccel = coordinates.get("roll").getAccelerationValue(aState);
         double twist = coordinates.get("twist").getValue(aState);
+        double twistRate = coordinates.get("twist").getSpeedValue(aState);
+        double twistAccel = coordinates.get("twist").getAccelerationValue(aState);
 		double hunch = coordinates.get("hunch").getValue(aState);
 		double pitch = coordinates.get("pitch").getValue(aState);
         // ====================================================================
         f = 0;
-        if (_tool.get_optimize_deviation_from_anterior_legs_down())
+        if (_tool.get_optimize_anterior_legs_down())
         {
-            f += pow(roll - Pi, 2);
+            f += pow(roll - Pi, 2) + pow(rollRate, 2) + pow(rollAccel, 2);
         }
-        if (_tool.get_optimize_deviation_from_posterior_legs_down())
+        if (_tool.get_optimize_posterior_legs_down())
         {
-            f += pow(twist - 0.0, 2);
+            f += pow(twist - 0.0, 2) + pow(twistRate, 2) + pow(twistAccel, 2);
         }
-        if (_tool.get_optimize_deviation_from_sagittal_symmetry())
+        if (_tool.get_optimize_sagittal_symmetry())
         {
             f += pow(hunch - 2 * pitch, 2);
+        }
+        if (_tool.get_optimize_legs_prepared_for_landing())
+        {   
+            // These values may not be available for all models.
+            double frontLegs = coordinates.get("frontLegs").getValue(aState);
+            double frontLegsRate = coordinates.get("frontLegs").getSpeedValue(aState);
+            double frontLegsAccel = coordinates.get("frontLegs").getAccelerationValue(aState);
+            double backLegs = coordinates.get("backLegs").getValue(aState);
+            double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
+            double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
+            f += pow(frontLegs, 2) + pow(frontLegsRate, 2) + pow(frontLegsAccel, 2);
+            f += pow(backLegs, 2) + pow(backLegsRate, 2) + pow(backLegsAccel, 2);
         }
         // ====================================================================
 
@@ -402,7 +425,7 @@ public:
         // Create the FunctionSet that we'll then serialize.
         FunctionSet fset;
         fset.setSize(_splines.size());
-        for (int iFcn = 0; iFcn < _splines.size(); iFcn++)
+        for (unsigned int iFcn = 0; iFcn < _splines.size(); iFcn++)
         {
             fset.insert(iFcn, *_splines[iFcn]);
         }
