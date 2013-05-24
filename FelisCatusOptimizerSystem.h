@@ -42,6 +42,8 @@ using SimTK::Vector;
 namespace OpenSim
 {
 
+// TODO add a term to reduce the amount of torque necessary to do the action, to
+// avoid superfluous motion.
 // TODO input is which terms to use in objective function.
 // TODO normalize time
 // TODO normalize max/min control.
@@ -64,12 +66,13 @@ public:
             "Duration of forward dynamics simulation (seconds).");
     OpenSim_DECLARE_PROPERTY(optimizer_algorithm, string,
             "Enum, as a string, for the Optimizer algorithm to use "
-            "(e.g., InteriorPoint).")
+            "Options are BestAvailable, InteriorPoint, LBFGS, LBFGSB, CFSQP.")
     OpenSim_DECLARE_PROPERTY(num_optim_spline_points, int,
             "Number of points being optimized in each spline function. "
             "Constant across all splines. If an initial_parameters_filename is "
             "provided, the functions specified in that file must have the "
             "correct number of points. We do not error-check for this.");
+
     OpenSim_DECLARE_PROPERTY(anterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
             "(hunch - Pi) and related speeds.");

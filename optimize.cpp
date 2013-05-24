@@ -44,15 +44,19 @@ int main(int argc, char * argv[])
 
         // Create the optimizer with our system.
         SimTK::OptimizerAlgorithm algorithm;
-        if (tool.get_optimizer_algorithm() == "InteriorPoint")
+        if (tool.get_optimizer_algorithm() == "BestAvailable")
+            algorithm = SimTK::BestAvailable;
+        else if (tool.get_optimizer_algorithm() == "InteriorPoint")
             algorithm = SimTK::InteriorPoint;
         else if (tool.get_optimizer_algorithm() == "LBFGS")
             algorithm = SimTK::LBFGS;
         else if (tool.get_optimizer_algorithm() == "LBFGSB")
             algorithm = SimTK::LBFGSB;
+        else if (tool.get_optimizer_algorithm() == "CFSQP")
+            algorithm = SimTK::CFSQP;
         else throw OpenSim::Exception("Unrecognized optimizer algorithm string.");
 
-        Optimizer opt(sys, SimTK::InteriorPoint);
+        Optimizer opt(sys, algorithm);
         // TODO choose tolerance better.
         opt.setConvergenceTolerance(0.01);
         opt.useNumericalGradient(true);
