@@ -37,60 +37,51 @@ private:
 
 int main(int argc, char *argv[])
 {
-    // 1-DOF Models
-    FelisCatusModel("Leland_twist", "feliscatus_twist.osim",
-		true, false, false, FelisCatusModel::None);
-	FelisCatusModel("Leland_hunch", "feliscatus_hunch.osim",
-		false, true, false, FelisCatusModel::None);
-	FelisCatusModel("Leland_wag", "feliscatus_wag.osim",
-		false, false, true, FelisCatusModel::None);
-	FelisCatusModel("Leland_twistRigidLegs", "feliscatus_twistRigidLegs.osim",
-		true, false, false, FelisCatusModel::Rigid);
-	FelisCatusModel("Leland_hunchRigidLegs", "feliscatus_hunchRigidLegs.osim",
-		false, true, false, FelisCatusModel::Rigid);
-	FelisCatusModel("Leland_wagRigidLegs", "feliscatus_wagRigidLegs.osim",
-		false, false, true, FelisCatusModel::Rigid);
-	FelisCatusModel("Leland_retractBackLeg", "feliscatus_retractBackLeg.osim",
-		false, false, false, FelisCatusModel::RetractBack);
-	
-	// 2-DOF Models
-	FelisCatusModel("Leland_retractLegs", "feliscatus_retractLegs.osim",
-		false, false, false, FelisCatusModel::Retract);
-	FelisCatusModel("Leland_twistHunch", "feliscatus_twistHunch.osim",
-		true, true, false, FelisCatusModel::None);
-	FelisCatusModel("Leland_twistWag", "feliscatus_twistWag.osim",
-		true, false, true, FelisCatusModel::None);
-	FelisCatusModel("Leland_hunchWag", "feliscatus_hunchWag.osim",
-		false, true, true, FelisCatusModel::None);
-	FelisCatusModel("Leland_twistHunchRigidLegs", "feliscatus_twistHunchRigidLegs.osim",
-		true, true, false, FelisCatusModel::Rigid);
-	FelisCatusModel("Leland_twistWagRigidLegs", "feliscatus_twistWagRigidLegs.osim",
-		true, false, true, FelisCatusModel::Rigid);
-	FelisCatusModel("Leland_hunchWagRigidLegs", "feliscatus_hunchWagRigidLegs.osim",
-		false, true, true, FelisCatusModel::Rigid);
-	FelisCatusModel("Leland_twistRetractLegs", "feliscatus_twistRetractLegs.osim",
-		true, false, false, FelisCatusModel::Retract);
-	FelisCatusModel("Leland_hunchRetractLegs", "feliscatus_hunchRetractLegs.osim",
-		false, true, false, FelisCatusModel::Retract);
-	FelisCatusModel("Leland_wagRetractLegs", "feliscatus_wagRetractLegs.osim",
-		false, false, true, FelisCatusModel::Retract);
+    vector<bool> bothOptions;
+    bothOptions.push_back(false);
+    bothOptions.push_back(true);
 
-	// 3-DOF Models
-	FelisCatusModel("Leland_twistHunchWag", "feliscatus_twistHunchWag.osim",
-		true, true, true, FelisCatusModel::None);
-	FelisCatusModel("Leland_twistHunchWagRigidLegs", "feliscatus_twistHunchWagRigidLegs.osim",
-		true, true, true, FelisCatusModel::Rigid);
-	FelisCatusModel("Leland_twistHunchRetractLegs", "feliscatus_twistHunchRetractLegs.osim",
-		true, true, false, FelisCatusModel::Retract);
+    vector<bool> canTwist = bothOptions;
+    vector<bool> canHunch = bothOptions;
+    vector<bool> canWag = bothOptions;
 
-	FelisCatusModel("Leland_twistWagRetractLegs", "feliscatus_twistWagRetractLegs.osim",
-		true, false, true, FelisCatusModel::Retract);
-	FelisCatusModel("Leland_hunchWagRetractLegs", "feliscatus_hunchWagRetractLegs.osim",
-		false, true, true, FelisCatusModel::Retract);
+    vector<string> twistStrings;
 
-	// 4-DOF Models
-	FelisCatusModel("Leland_twistHunchWagRetractLegs", "feliscatus_twistHunchWagRetractLegs.osim",
-		true, true, true, FelisCatusModel::Retract);
+    vector<FelisCatusModel::LegsType> whichLegs;
+    whichLegs.push_back(FelisCatusModel::Rigid);
+    whichLegs.push_back(FelisCatusModel::RetractBack);
+    whichLegs.push_back(FelisCatusModel::Retract);
+
+    for (unsigned int it = 0; it < canTwist.size(); it++)
+    {
+        for (unsigned int ih = 0; ih < canHunch.size(); ih++)
+        {
+            for (unsigned int iw = 0; iw < canWag.size(); iw++)
+            {
+                for (int iL = 0; iL < whichLegs.size(); iL++)
+                {
+                    string modifier = "_";
+                    modifier += canTwist[it] ? "Twist" : "";
+                    modifier += canHunch[ih] ? "Hunch" : "";
+                    modifier += canWag[iw] ? "Wag" : "";
+
+                    switch (whichLegs[iL])
+                    {
+                        case FelisCatusModel::Rigid:
+                            modifier += "RigidLegs"; break;
+                        case FelisCatusModel::RetractBack:
+                            modifier += "RetractBackLeg"; break;
+                        case FelisCatusModel::Retract:
+                            modifier += "RetractLegs"; break;
+                    }
+                    FelisCatusModel("Leland" + modifier,
+                            "feliscatus" + modifier + ".osim",
+                            canTwist[it], canHunch[ih], canWag[iw],
+                            whichLegs[iL]);
+                }
+            }
+        }
+    }
 
     return EXIT_SUCCESS;
 };
