@@ -174,7 +174,7 @@ void FelisCatusModel::createBaseCase()
     double groundAnteriorCS3range[2] = {-1, 1};
     groundAnteriorCS[3].setRange(groundAnteriorCS3range);
     groundAnteriorCS[3].setDefaultValue(0);
-	groundAnteriorCS[3].setDefaultLocked(true);
+	groundAnteriorCS[3].setDefaultLocked(false);
     // ty
     double groundAnteriorCS4range[2] = {-1, 5};
     groundAnteriorCS[4].setRange(groundAnteriorCS4range);
@@ -184,7 +184,7 @@ void FelisCatusModel::createBaseCase()
     double groundAnteriorCS5range[2] = {-1, 1};
     groundAnteriorCS[5].setRange(groundAnteriorCS5range);
     groundAnteriorCS[5].setDefaultValue(0);
-    groundAnteriorCS[5].setDefaultLocked(true);
+    groundAnteriorCS[5].setDefaultLocked(false);
 
     // Connecting the anterior and posterior bodies via a custom joint. 
 	// Rotation is defined via ZYX Euler angles, named hunch, wag, and
