@@ -396,7 +396,7 @@ public:
         // ====================================================================
 
         // Update the log.
-        _lastCallWasBestYet = isBestYet;
+        _lastCallWasBestYet = _thisCallIsBestYet;
         _thisCallIsBestYet = f <= _objectiveFcnValueBestYet;
         if (_thisCallIsBestYet) _objectiveFcnValueBestYet = f;
         _optLog << _objectiveCalls << " " << f << " " << _objectiveFcnValueBestYet;
