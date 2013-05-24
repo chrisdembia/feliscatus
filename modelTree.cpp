@@ -17,7 +17,7 @@ class FelisCatusModel : public FelisCatusModeling
 {
 public:
 
-	enum LegsType {None, Rigid, Retract};
+	enum LegsType {None, Rigid, RetractBack, Retract};
 
     // member functions to allow for stepwise model creation
 	// NOTE: each 'add' function takes care of actuators if necessary
@@ -28,7 +28,7 @@ public:
 	void addHunch();
 	void addWag();
 	void addRigidLegs();
-	void addRetractLegs();
+	void addRetractLegs(bool frontLegsRetract=true);
 
 private:
 
@@ -38,55 +38,58 @@ private:
 int main(int argc, char *argv[])
 {
     // 1-DOF Models
-	FelisCatusModel m1("Leland_twist", "feliscatus_twist.osim",
+    FelisCatusModel("Leland_twist", "feliscatus_twist.osim",
 		true, false, false, FelisCatusModel::None);
-	FelisCatusModel m2("Leland_hunch", "feliscatus_hunch.osim",
+	FelisCatusModel("Leland_hunch", "feliscatus_hunch.osim",
 		false, true, false, FelisCatusModel::None);
-	FelisCatusModel m3("Leland_wag", "feliscatus_wag.osim",
+	FelisCatusModel("Leland_wag", "feliscatus_wag.osim",
 		false, false, true, FelisCatusModel::None);
-	FelisCatusModel m4("Leland_twistRigidLegs", "feliscatus_twistRigidLegs.osim",
+	FelisCatusModel("Leland_twistRigidLegs", "feliscatus_twistRigidLegs.osim",
 		true, false, false, FelisCatusModel::Rigid);
-	FelisCatusModel m5("Leland_hunchRigidLegs", "feliscatus_hunchRigidLegs.osim",
+	FelisCatusModel("Leland_hunchRigidLegs", "feliscatus_hunchRigidLegs.osim",
 		false, true, false, FelisCatusModel::Rigid);
-	FelisCatusModel m6("Leland_wagRigidLegs", "feliscatus_wagRigidLegs.osim",
+	FelisCatusModel("Leland_wagRigidLegs", "feliscatus_wagRigidLegs.osim",
 		false, false, true, FelisCatusModel::Rigid);
-	FelisCatusModel m7("Leland_retractLegs", "feliscatus_retractLegs.osim",
-		false, false, false, FelisCatusModel::Retract);
+	FelisCatusModel("Leland_retractBackLeg", "feliscatus_retractBackLeg.osim",
+		false, false, false, FelisCatusModel::RetractBack);
 	
 	// 2-DOF Models
-	FelisCatusModel m8("Leland_twistHunch", "feliscatus_twistHunch.osim",
+	FelisCatusModel("Leland_retractLegs", "feliscatus_retractLegs.osim",
+		false, false, false, FelisCatusModel::Retract);
+	FelisCatusModel("Leland_twistHunch", "feliscatus_twistHunch.osim",
 		true, true, false, FelisCatusModel::None);
-	FelisCatusModel m9("Leland_twistWag", "feliscatus_twistWag.osim",
+	FelisCatusModel("Leland_twistWag", "feliscatus_twistWag.osim",
 		true, false, true, FelisCatusModel::None);
-	FelisCatusModel m10("Leland_hunchWag", "feliscatus_hunchWag.osim",
+	FelisCatusModel("Leland_hunchWag", "feliscatus_hunchWag.osim",
 		false, true, true, FelisCatusModel::None);
-	FelisCatusModel m11("Leland_twistHunchRigidLegs", "feliscatus_twistHunchRigidLegs.osim",
+	FelisCatusModel("Leland_twistHunchRigidLegs", "feliscatus_twistHunchRigidLegs.osim",
 		true, true, false, FelisCatusModel::Rigid);
-	FelisCatusModel m12("Leland_twistWagRigidLegs", "feliscatus_twistWagRigidLegs.osim",
+	FelisCatusModel("Leland_twistWagRigidLegs", "feliscatus_twistWagRigidLegs.osim",
 		true, false, true, FelisCatusModel::Rigid);
-	FelisCatusModel m13("Leland_hunchWagRigidLegs", "feliscatus_hunchWagRigidLegs.osim",
+	FelisCatusModel("Leland_hunchWagRigidLegs", "feliscatus_hunchWagRigidLegs.osim",
 		false, true, true, FelisCatusModel::Rigid);
-	FelisCatusModel m14("Leland_twistRetractLegs", "feliscatus_twistRetractLegs.osim",
+	FelisCatusModel("Leland_twistRetractLegs", "feliscatus_twistRetractLegs.osim",
 		true, false, false, FelisCatusModel::Retract);
-	FelisCatusModel m15("Leland_hunchRetractLegs", "feliscatus_hunchRetractLegs.osim",
+	FelisCatusModel("Leland_hunchRetractLegs", "feliscatus_hunchRetractLegs.osim",
 		false, true, false, FelisCatusModel::Retract);
-	FelisCatusModel m16("Leland_wagRetractLegs", "feliscatus_wagRetractLegs.osim",
+	FelisCatusModel("Leland_wagRetractLegs", "feliscatus_wagRetractLegs.osim",
 		false, false, true, FelisCatusModel::Retract);
 
 	// 3-DOF Models
-	FelisCatusModel m17("Leland_twistHunchWag", "feliscatus_twistHunchWag.osim",
+	FelisCatusModel("Leland_twistHunchWag", "feliscatus_twistHunchWag.osim",
 		true, true, true, FelisCatusModel::None);
-	FelisCatusModel m18("Leland_twistHunchWagRigidLegs", "feliscatus_twistHunchWagRigidLegs.osim",
+	FelisCatusModel("Leland_twistHunchWagRigidLegs", "feliscatus_twistHunchWagRigidLegs.osim",
 		true, true, true, FelisCatusModel::Rigid);
-	FelisCatusModel m19("Leland_twistHunchRetractLegs", "feliscatus_twistHunchRetractLegs.osim",
+	FelisCatusModel("Leland_twistHunchRetractLegs", "feliscatus_twistHunchRetractLegs.osim",
 		true, true, false, FelisCatusModel::Retract);
-	FelisCatusModel m20("Leland_twistWagRetractLegs", "feliscatus_twistWagRetractLegs.osim",
+
+	FelisCatusModel("Leland_twistWagRetractLegs", "feliscatus_twistWagRetractLegs.osim",
 		true, false, true, FelisCatusModel::Retract);
-	FelisCatusModel m21("Leland_hunchWagRetractLegs", "feliscatus_hunchWagRetractLegs.osim",
+	FelisCatusModel("Leland_hunchWagRetractLegs", "feliscatus_hunchWagRetractLegs.osim",
 		false, true, true, FelisCatusModel::Retract);
 
 	// 4-DOF Models
-	FelisCatusModel m22("Leland_twistHunchWagRetractLegs", "feliscatus_twistHunchWagRetractLegs.osim",
+	FelisCatusModel("Leland_twistHunchWagRetractLegs", "feliscatus_twistHunchWagRetractLegs.osim",
 		true, true, true, FelisCatusModel::Retract);
 
     return EXIT_SUCCESS;
@@ -113,6 +116,8 @@ FelisCatusModel::FelisCatusModel(string modelName, string fileName,
 
 	if (whichLegs == Rigid) {
 		addRigidLegs();
+    } else if (whichLegs == RetractBack) {
+        addRetractLegs(false);
 	} else if (whichLegs == Retract) {
 		addRetractLegs();
 	}
@@ -296,7 +301,7 @@ void FelisCatusModel::addRigidLegs()
 	cat.addBody(posteriorLegs);
 }
 
-void FelisCatusModel::addRetractLegs()
+void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
 {
 	// Adding 1-DOF legs.
 	Vec3 locALegsInAnterior(-0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
@@ -310,8 +315,16 @@ void FelisCatusModel::addRetractLegs()
     anteriorToLegsCS[0].setName("frontLegs");
     double anteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
     anteriorToLegsCS[0].setRange(anteriorToLegsCS0range);
-    anteriorToLegsCS[0].setDefaultValue(0);
-    anteriorToLegsCS[0].setDefaultLocked(false);
+    if (frontLegsRetract)
+    {
+        anteriorToLegsCS[0].setDefaultValue(0);
+        anteriorToLegsCS[0].setDefaultLocked(false);
+    }
+    else
+    {
+        anteriorToLegsCS[0].setDefaultValue(0.25 * Pi);
+        anteriorToLegsCS[0].setDefaultLocked(true);
+    }
 
 	Vec3 locPLegsInPosterior(0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
     Vec3 orientPLegsInPosterior(0, Pi, 0);
@@ -331,11 +344,14 @@ void FelisCatusModel::addRetractLegs()
 	cat.addBody(posteriorLegs);
 
 	// Adding leg actuators.
-	CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
-	frontLegsAct->setName("frontLegs_actuator");
-	frontLegsAct->setMinControl(-maxTorque);
-    frontLegsAct->setMaxControl(maxTorque);
-	cat.addForce(frontLegsAct);
+    if (frontLegsRetract)
+    {
+        CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
+        frontLegsAct->setName("frontLegs_actuator");
+        frontLegsAct->setMinControl(-maxTorque);
+        frontLegsAct->setMaxControl(maxTorque);
+        cat.addForce(frontLegsAct);
+    }
     
 	CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
     backLegsAct->setName("backLegs_actuator");

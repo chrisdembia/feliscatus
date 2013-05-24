@@ -38,6 +38,9 @@ int main(int argc, char *argv[])
     Model cat(modelFileName);
     cat.setUseVisualizer(true);
 
+    // To aid with visualization.
+    cat.setGravity(Vec3(0, 0, 0));
+
     // --- Prepare for integration.
     State& initState = cat.initSystem();
 
@@ -68,8 +71,9 @@ int main(int argc, char *argv[])
 
     // Integrate from initial time to final time
     manager.setInitialTime(0);
-    manager.setFinalTime(5.0);
+    manager.setFinalTime(1.0);
 
+    sleep(1);
     manager.integrate(initState);
 
     // Memory management.
