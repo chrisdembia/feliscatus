@@ -61,6 +61,9 @@ public:
             "Specifies path to model file, WITH .osim extension.");
     OpenSim_DECLARE_PROPERTY(duration, double,
             "Duration of forward dynamics simulation (seconds).");
+    OpenSim_DECLARE_PROPERTY(optimizer_algorithm, string,
+            "Enum, as a string, for the Optimizer algorithm to use "
+            "(e.g., InteriorPoint).")
     OpenSim_DECLARE_PROPERTY(num_optim_spline_points, int,
             "Number of points being optimized in each spline function. "
             "Constant across all splines. If an initial_parameters_filename is "
@@ -114,6 +117,7 @@ public:
         constructProperty_results_directory("results");
         constructProperty_model_filename("");
         constructProperty_duration(1.0);
+        constructProperty_optimizer_algorithm("InteriorPoint");
         constructProperty_num_optim_spline_points(5);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);

@@ -19,6 +19,7 @@ int main(int argc, char * argv[])
     tool.set_results_directory("results");
     tool.set_model_filename("");
     tool.set_duration(1.0);
+    tool.set_optimizer_algorithm("InteriorPoint");
     tool.set_num_optim_spline_points(5);
     tool.set_anterior_legs_down_weight(1.0);
     tool.set_posterior_legs_down_weight(1.0);

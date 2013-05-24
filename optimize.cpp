@@ -43,6 +43,15 @@ int main(int argc, char * argv[])
         FelisCatusOptimizerSystem sys(tool);
 
         // Create the optimizer with our system.
+        SimTK::OptimizerAlgorithm algorithm;
+        if (tool.get_optimizer_algorithm() == "InteriorPoint")
+            algorithm = SimTK::InteriorPoint;
+        else if (tool.get_optimizer_algorithm() == "LBFGS")
+            algorithm = SimTK::LBFGS;
+        else if (tool.get_optimizer_algorithm() == "LBFGSB")
+            algorithm = SimTK::LBFGSB;
+        else throw OpenSim::Exception("Unrecognized optimizer algorithm string.");
+
         Optimizer opt(sys, SimTK::InteriorPoint);
         // TODO choose tolerance better.
         opt.setConvergenceTolerance(0.01);
