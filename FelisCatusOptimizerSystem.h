@@ -47,6 +47,7 @@ namespace OpenSim
 // TODO normalize max/min control.
 // TODO move manager code outside of the objective function loop if possible.
 // TODO figure out how to space out control points over time.
+// TODO we assume that minControl is negative.
 
 /**
  * Manages inputs to an optimization of cat-flipping via OpenSim's
@@ -181,6 +182,9 @@ public:
         int numParameters = _numActuators * _numOptimSplinePoints;
         setNumParameters(numParameters);
 
+        // Size the vector of best-yet splines.
+        _splinesBestYet.resize(_numActuators);
+
         // Add a PrescribedController to the model.
         PrescribedController * flipController = new PrescribedController();
         flipController->setName("flip_controller");
@@ -308,7 +312,7 @@ public:
                 // Dimensional control value.
                 double dimControlValue;
 
-                if (parameters[paramIndex] < 0)
+                if  (parameters[paramIndex] < 0 && minControl < 0)
                 { // parameter and minControl are both neg; must negate again.
                     dimControlValue = -minControl * parameters[paramIndex];
                 }
@@ -338,7 +342,6 @@ public:
         // Integrate from initial time to final time
         manager.setInitialTime(0);
         manager.setFinalTime(_tool.get_duration());
-        // TODO change this initial time; penalize for taking too long.
 
         // --------------------------------------------------------------------
         manager.integrate(initState);
@@ -374,7 +377,7 @@ public:
             f += _tool.get_sagittal_symmetry_weight() * (pow(hunch + 2 * pitch, 2));
         }
         if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
-        {   
+        {
             // These values may not be available for all models.
             double frontLegs = coordinates.get("frontLegs").getValue(aState);
             double frontLegsRate = coordinates.get("frontLegs").getSpeedValue(aState);
@@ -390,14 +393,26 @@ public:
         // ====================================================================
 
         // Update the log.
-        _objectiveFcnValueBestYet = std::min(f, _objectiveFcnValueBestYet);
-        _optLog << _objectiveCalls << " " << f <<
-            " " <<  _objectiveFcnValueBestYet;
+        bool isBestYet = f <= _objectiveFcnValueBestYet;
+        if (isBestYet) _objectiveFcnValueBestYet = f;
+        _optLog << _objectiveCalls << " " << f << " " << _objectiveFcnValueBestYet;
         for (int i = 0; i < parameters.size(); i++)
         {
             _optLog << " " << parameters[i];
         }
         _optLog << endl;
+
+        // If this is the best yet, save a copy of the splines.
+        if (isBestYet)
+        {
+            for (unsigned int iFcn = 0; iFcn < _splinesBestYet.size(); iFcn++)
+                _splinesBestYet[iFcn] = *_splines[iFcn];
+        }
+
+        // If we just got worse, print out the best-yet splines.
+        if (f > _objectiveFcnValueBestYet)
+            printBestYetPrescribedControllerFunctionSet(
+                    _name + "_best_yet_parameters.xml");
 
         // Print out to the terminal/console every so often.
         if (_objectiveCalls % 100 == 0)
@@ -440,6 +455,51 @@ public:
         fset.print(_name + "/" + filename);
     }
 
+    /// @brief Serializes the set of functions associated with the best-yet
+    /// value of the objective function.
+    /// The file will be located in the directory containing the log file
+    /// for this optimization run.
+    /// @param nondimensionalize Divide spline values by minControl for the
+    ///     actuator, if value is negative, and by maxControl, if value is
+    ///     positive. If nondimensionalized, this FunctionSet can be used
+    ///     as initial parameters.
+    void printBestYetPrescribedControllerFunctionSet(string filename,
+            bool nondimensionalize=false) const
+    {
+        // Create the FunctionSet that we'll then serialize.
+        FunctionSet fset;
+        fset.setSize(_splinesBestYet.size());
+        for (unsigned int iFcn = 0; iFcn < _splinesBestYet.size(); iFcn++)
+        {
+            fset.insert(iFcn, _splinesBestYet[iFcn]);
+
+            if (nondimensionalize)
+            { // Go through each y-value and nondim. it based on its sign.
+
+                // Max/min for all spline points for the i-th actuator.
+                double minControl = _cat.getActuators().get(iFcn).getMinControl();
+                double maxControl = _cat.getActuators().get(iFcn).getMaxControl();
+
+                for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
+                {
+                    SimmSpline * fcn = dynamic_cast<SimmSpline *>(&fset.get(iFcn));
+                    double dimValue = fcn->getY(iPts);
+                    double nonDimValue = 0;
+                    if (dimValue < 0 && minControl < 0)
+                    {
+                        nonDimValue = -dimValue / minControl;
+                    }
+                    else
+                    {
+                        nonDimValue = dimValue / maxControl;
+                    }
+                    fcn->setY(iPts, nonDimValue);
+                }
+            }
+        }
+        fset.print(_name + "/" + filename);
+    }
+
 private:
 
     /// See constructor.
@@ -460,6 +520,9 @@ private:
 
     /// A vector of the spline functions used in the PrescribedController.
     vector<SimmSpline *> _splines;
+
+    /// Vector of the splines that gave the best objective value yet.
+    mutable vector<SimmSpline> _splinesBestYet;
 
     // 'mutable' lets us modify the member inside const member functions, such
     // as objectiveFunc() above.
