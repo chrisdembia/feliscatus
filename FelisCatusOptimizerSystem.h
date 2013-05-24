@@ -396,8 +396,9 @@ public:
         // ====================================================================
 
         // Update the log.
-        bool isBestYet = f <= _objectiveFcnValueBestYet;
-        if (isBestYet) _objectiveFcnValueBestYet = f;
+        _lastCallWasBestYet = isBestYet;
+        _thisCallIsBestYet = f <= _objectiveFcnValueBestYet;
+        if (_thisCallIsBestYet) _objectiveFcnValueBestYet = f;
         _optLog << _objectiveCalls << " " << f << " " << _objectiveFcnValueBestYet;
         for (int i = 0; i < parameters.size(); i++)
         {
@@ -406,14 +407,14 @@ public:
         _optLog << endl;
 
         // If this is the best yet, save a copy of the splines.
-        if (isBestYet)
+        if (_thisCallIsBestYet)
         {
             for (unsigned int iFcn = 0; iFcn < _splinesBestYet.size(); iFcn++)
                 _splinesBestYet[iFcn] = *_splines[iFcn];
         }
 
         // If we just got worse, print out the best-yet splines.
-        if (f > _objectiveFcnValueBestYet)
+        if (_lastCallWasBestYet && ~_thisCallIsBestYet)
             printBestYetPrescribedControllerFunctionSet(
                     _name + "_best_yet_parameters.xml");
 
@@ -538,6 +539,10 @@ private:
 
     /// The best (lowest) value of the objective function, for logging.
     mutable double _objectiveFcnValueBestYet;
+
+    // To aid with conservative printing of best yet actuation.
+    bool _lastCallWasBestYet;
+    bool _thisCallIsBestYet;
 
 };
 
