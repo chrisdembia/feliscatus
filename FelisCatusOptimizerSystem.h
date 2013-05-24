@@ -541,8 +541,8 @@ private:
     mutable double _objectiveFcnValueBestYet;
 
     // To aid with conservative printing of best yet actuation.
-    bool _lastCallWasBestYet;
-    bool _thisCallIsBestYet;
+    mutable bool _lastCallWasBestYet;
+    mutable bool _thisCallIsBestYet;
 
 };
 
