@@ -1,3 +1,4 @@
+
 #ifndef FELISCATUSOPTIMIZERSYSTEM_H
 #define FELISCATUSOPTIMIZERSYSTEM_H
 
@@ -44,9 +45,7 @@ namespace OpenSim
 
 // TODO add a term to reduce the amount of torque necessary to do the action, to
 // avoid superfluous motion.
-// TODO input is which terms to use in objective function.
 // TODO normalize time
-// TODO normalize max/min control.
 // TODO move manager code outside of the objective function loop if possible.
 // TODO figure out how to space out control points over time.
 // TODO we assume that minControl is negative.
@@ -75,10 +74,10 @@ public:
 
     OpenSim_DECLARE_PROPERTY(anterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
-            "(hunch - Pi) and related speeds.");
+            "(roll - Pi) and related speeds.");
     OpenSim_DECLARE_PROPERTY(posterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
-            "(twist - 0.0) and related speeds");
+            "(twist - 0) and related speeds");
     OpenSim_DECLARE_PROPERTY(sagittal_symmetry_weight, double,
             "Adds a term to the objective to minimize final value of "
             "(hunch - 2 * pitch)");
@@ -91,14 +90,13 @@ public:
             "optimization parameters. If not provided, initial parameters are "
             "all 0.0, and this element must be DELETED from the XML file "
             "(cannot just leave it blank). The name of each function must be "
-            "identical to that of "
-            "the actuator it is for. x values are ignored. The time values "
-            "that are actually used in the simulation are equally spaced from "
-            "t = 0 to t = duration, and there should be as many points in each "
-            "function as given by the num_optim_spline_points property. y "
-            "values should be nondimensional and between -1 and 1. NOTE the "
-            "output optimized splines are NOT NONDIMENSIONAL. Be careful; we "
-            "do not do any error checking.")
+            "identical to that of the actuator it is for. x values are ignored. "
+            "The time values that are actually used in the simulation are "
+            "equally spaced from t = 0 to t = duration, and there should be "
+			"as many points in each function as given by the num_optim_spline_points "
+            "property. y values should be nondimensional and between -1 and 1. "
+            "NOTE the output optimized splines are NOT NONDIMENSIONAL. Be careful; "
+            "we do not do any error checking.")
 
     FelisCatusOptimizerTool() : Object()
     {
@@ -119,15 +117,15 @@ public:
     void constructProperties()
     {
         constructProperty_results_directory("results");
-        constructProperty_model_filename("");
-        constructProperty_duration(1.0);
+        constructProperty_model_filename("feliscatus_*FILL THIS IN*.osim");
+        constructProperty_duration(0.8);
         constructProperty_optimizer_algorithm("InteriorPoint");
         constructProperty_num_optim_spline_points(5);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
         constructProperty_sagittal_symmetry_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
-        constructProperty_initial_parameters_filename("");
+        constructProperty_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
     }
 
 };
@@ -138,8 +136,8 @@ public:
  * Finds a control input/trajectory that achieves certain desired
  * features of a cat's flipping maneuver. The optimizer system can operate on
  * different cat models, so long as they possess the following:
- * TODO
- *      1. a 'roll' coordinate equal to pi radians when anterior legs down.
+ * 
+ *      1. a 'roll' coordinate equal to PI radians when anterior legs down.
  *      2. a 'twist' coordinate equal to 0 when posterior legs down.
  *
  * The control of the system is performed via a PrescribedController that uses
@@ -163,11 +161,11 @@ public:
         _numOptimSplinePoints = _tool.get_num_optim_spline_points();
 
         // Create a directory for all the output files we'll create.
-#if defined(_WIN32)
-        _mkdir(_name.c_str());
-#else
-        mkdir(_name.c_str(), 0777);
-#endif
+		#if defined(_WIN32)
+			_mkdir(_name.c_str());
+		#else
+			mkdir(_name.c_str(), 0777);
+		#endif
 
         // Serialize what we just deserialized, in the results dir.
         // To keep everything in one nice organized place.
@@ -351,7 +349,7 @@ public:
         // --------------------------------------------------------------------
 
         // --- Construct the objective function, term by term.
-        // Create a copy of the init state; we need a state consistent w/model.
+        // Create a copy of the init state; we need a state consistent with model.
         State aState = initState;
         _cat.getMultibodySystem().realize(aState, Stage::Acceleration);
         const CoordinateSet& coordinates = _cat.getCoordinateSet();
@@ -388,7 +386,9 @@ public:
             double backLegs = coordinates.get("backLegs").getValue(aState);
             double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
             double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
-            f += _tool.get_legs_prepared_for_landing_weight() * (
+            // TODO want the dot(X-axis of each leg frame, global Y-axis) to be zero (i.e., legs
+			// straight down)
+			f += _tool.get_legs_prepared_for_landing_weight() * (
                 pow(frontLegs, 2) + pow(frontLegsRate, 2) + pow(frontLegsAccel, 2));
             f += _tool.get_legs_prepared_for_landing_weight() * (
                 pow(backLegs, 2) + pow(backLegsRate, 2) + pow(backLegsAccel, 2));

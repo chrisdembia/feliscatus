@@ -20,7 +20,7 @@ using OpenSim::FelisCatusOptimizerTool;
  * optimization, as well as an XML file containing all the splines used for
  * controls.
  * */
-int main(int argc, char * argv[])
+int main(char * argv[])
 {
     // Get the filename of the FelisCatusOptimizerTool serialization.
     // argc is the number of command line inputs, INCLUDING the name of the
@@ -29,10 +29,10 @@ int main(int argc, char * argv[])
     //      necessarily being the name of the executable.
     string help = "Must specify the name of a FelisCatusOptimizerTool "
                   "serialization (setup/input file).\n\nExamples:\n\t"
-                  "optimize runA_setup.xml\n";
+                  "optimize feliscatusoptimizertool_template.xml\n";
 
-    if (argc == 2)
-    { // Correct number of inputs.
+    if (argv != NULL)
+    { // Correct input.
 
         // Parse inputs using the Tool class.
         string toolSetupFile = argv[1];
@@ -94,7 +94,7 @@ int main(int argc, char * argv[])
         }
     }
     else
-    { // Too few/many inputs, etc.
+    {
         cout << "\nIncorrect input provided. " << help << endl;
         return 0;
     }

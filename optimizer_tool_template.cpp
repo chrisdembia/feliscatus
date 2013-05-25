@@ -17,15 +17,15 @@ int main(int argc, char * argv[])
     string filename = "feliscatusoptimizertool_template.xml";
     FelisCatusOptimizerTool tool;
     tool.set_results_directory("results");
-    tool.set_model_filename("");
-    tool.set_duration(1.0);
+    tool.set_model_filename("feliscatus_*FILL THIS IN*.osim");
+    tool.set_duration(0.8);
     tool.set_optimizer_algorithm("InteriorPoint");
     tool.set_num_optim_spline_points(5);
     tool.set_anterior_legs_down_weight(1.0);
     tool.set_posterior_legs_down_weight(1.0);
     tool.set_sagittal_symmetry_weight(1.0);
     tool.set_legs_prepared_for_landing_weight(1.0);
-    tool.set_initial_parameters_filename("");
+    tool.set_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
     tool.print(filename);
 
     cout << "Printed template as " << filename << "." << endl;
