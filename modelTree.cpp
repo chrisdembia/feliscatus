@@ -163,7 +163,7 @@ void FelisCatusModel::createBaseCase()
     // pitch
     double groundAnteriorCS1range[2] = {-Pi, Pi};
     groundAnteriorCS[1].setRange(groundAnteriorCS1range);
-    groundAnteriorCS[1].setDefaultValue(0);
+    groundAnteriorCS[1].setDefaultValue(convertDegreesToRadians(-15));
     groundAnteriorCS[1].setDefaultLocked(false);
     // roll
     double groundAnteriorCS2range[2] = {-Pi, Pi};
@@ -216,7 +216,7 @@ void FelisCatusModel::createBaseCase()
     double anteriorPosteriorCS0range[2] = {convertDegreesToRadians(-20),
 										   convertDegreesToRadians(90)};  // -20/+90 deg
     anteriorPosteriorCS[0].setRange(anteriorPosteriorCS0range);
-    anteriorPosteriorCS[0].setDefaultValue(0);
+    anteriorPosteriorCS[0].setDefaultValue(convertDegreesToRadians(30));
     anteriorPosteriorCS[0].setDefaultLocked(true);
 	// wag
     double anteriorPosteriorCS1range[2] = {-0.25 * Pi, 0.25 * Pi};   // +/- 45 deg
@@ -293,7 +293,7 @@ void FelisCatusModel::addRigidLegs()
 	Vec3 locALegsInAnterior(-0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
     Vec3 orientALegsInAnterior(0);
     Vec3 locALegsInLegs(0);
-    Vec3 orientALegsInLegs(0, 0, -0.5 * Pi);
+    Vec3 orientALegsInLegs(0, 0, -0.5 * Pi - convertDegreesToRadians(10));
     WeldJoint * anteriorToLegs = new WeldJoint("anterior_legs",
             *anteriorBody, locALegsInAnterior, orientALegsInAnterior,
             *anteriorLegs, locALegsInLegs, orientALegsInLegs);
@@ -301,7 +301,7 @@ void FelisCatusModel::addRigidLegs()
 	Vec3 locPLegsInPosterior(0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
     Vec3 orientPLegsInPosterior(0, Pi, 0);
     Vec3 locPLegsInLegs(0);
-    Vec3 orientPLegsInLegs(0, 0, -0.5 * Pi);
+    Vec3 orientPLegsInLegs(0, 0, -0.5 * Pi - convertDegreesToRadians(10));
     WeldJoint * posteriorToLegs = new WeldJoint("posterior_legs",
             *posteriorBody, locPLegsInPosterior, orientPLegsInPosterior,
             *posteriorLegs, locPLegsInLegs, orientPLegsInLegs);
@@ -326,7 +326,7 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
     anteriorToLegsCS[0].setRange(anteriorToLegsCS0range);
     if (frontLegsRetract)
     {
-        anteriorToLegsCS[0].setDefaultValue(0);
+        anteriorToLegsCS[0].setDefaultValue(convertDegreesToRadians(10));
         anteriorToLegsCS[0].setDefaultLocked(false);
     }
     else
@@ -346,7 +346,7 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
     posteriorToLegsCS[0].setName("backLegs");
     double posteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
     posteriorToLegsCS[0].setRange(posteriorToLegsCS0range);
-    posteriorToLegsCS[0].setDefaultValue(0);
+    posteriorToLegsCS[0].setDefaultValue(convertDegreesToRadians(10));
     posteriorToLegsCS[0].setDefaultLocked(false);
 
 	cat.addBody(anteriorLegs);
