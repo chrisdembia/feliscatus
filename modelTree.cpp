@@ -210,19 +210,22 @@ void FelisCatusModel::createBaseCase()
             *posteriorBody, locAPInPosterior, orientAPInPosterior,
 			anteriorPosteriorST);
 
-    CoordinateSet & anteriorPosteriorCS = anteriorPosterior->upd_CoordinateSet();
+    // Set coordinate limits based on empirical data (i.e., photos & video).
+	CoordinateSet & anteriorPosteriorCS = anteriorPosterior->upd_CoordinateSet();
     // hunch
-    double anteriorPosteriorCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
+    double anteriorPosteriorCS0range[2] = {convertDegreesToRadians(-20),
+										   convertDegreesToRadians(90)};  // -20/+90 deg
     anteriorPosteriorCS[0].setRange(anteriorPosteriorCS0range);
     anteriorPosteriorCS[0].setDefaultValue(0);
     anteriorPosteriorCS[0].setDefaultLocked(true);
 	// wag
-    double anteriorPosteriorCS1range[2] = {-0.5 * Pi, 0.5 * Pi};
+    double anteriorPosteriorCS1range[2] = {-0.25 * Pi, 0.25 * Pi};   // +/- 45 deg
     anteriorPosteriorCS[1].setRange(anteriorPosteriorCS1range);
     anteriorPosteriorCS[1].setDefaultValue(0);
     anteriorPosteriorCS[1].setDefaultLocked(true);
 	// twist
-    double anteriorPosteriorCS2range[2] = {-0.5 * Pi, 0.5 * Pi};
+    double anteriorPosteriorCS2range[2] = {convertDegreesToRadians(-80),
+										   convertDegreesToRadians(80)};  // +/- 80 deg
     anteriorPosteriorCS[2].setRange(anteriorPosteriorCS2range);
     anteriorPosteriorCS[2].setDefaultValue(0);
     anteriorPosteriorCS[2].setDefaultLocked(true);
@@ -242,6 +245,11 @@ void FelisCatusModel::addTwist()
 	twistAct->setMinControl(-maxTorque);
     twistAct->setMaxControl(maxTorque);
 	cat.addForce(twistAct);
+
+	// Set twist limit force.
+	OpenSim::CoordinateLimitForce * twistLimitForce = 
+		new CoordinateLimitForce("twist", 80, 1.0E6, -80, 1.0E6, 1.0E5, 5.0, false);
+	cat.addForce(twistLimitForce);
 }
 
 void FelisCatusModel::addHunch()
@@ -255,6 +263,11 @@ void FelisCatusModel::addHunch()
 	hunchAct->setMinControl(-maxTorque);
     hunchAct->setMaxControl(maxTorque);
 	cat.addForce(hunchAct);
+
+	// Set hunch limit force
+	OpenSim::CoordinateLimitForce * hunchLimitForce = 
+		new CoordinateLimitForce("hunch", 90, 1.0E6, -20, 1.0E6, 1.0E5, 5.0, false);
+	cat.addForce(hunchLimitForce);
 }
 
 void FelisCatusModel::addWag()
@@ -268,6 +281,11 @@ void FelisCatusModel::addWag()
 	wagAct->setMinControl(-maxTorque);
     wagAct->setMaxControl(maxTorque);
 	cat.addForce(wagAct);
+
+	// Set wag limit force.
+	OpenSim::CoordinateLimitForce * wagLimitForce = 
+		new CoordinateLimitForce("hunch", 45, 1.0E6, -45, 1.0E6, 1.0E5, 5.0, false);
+	cat.addForce(wagLimitForce);
 }
 
 void FelisCatusModel::addRigidLegs()

@@ -24,12 +24,14 @@ using OpenSim::CustomJoint;
 using OpenSim::Model;
 using OpenSim::SpatialTransform;
 using OpenSim::CoordinateActuator;
+using OpenSim::CoordinateLimitForce;
 
 using SimTK::Inertia;
 using SimTK::Pi;
 using SimTK::Rotation;
 using SimTK::Transform;
 using SimTK::Vec3;
+using SimTK::convertDegreesToRadians;
 
 /**
  * Creates an OpenSim model of a cat, sufficient for exploring the cat's
