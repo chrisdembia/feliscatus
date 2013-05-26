@@ -25,6 +25,7 @@ int main(int argc, char * argv[])
     tool.set_posterior_legs_down_weight(1.0);
     tool.set_sagittal_symmetry_weight(1.0);
     tool.set_legs_prepared_for_landing_weight(1.0);
+    tool.set_relative_velaccel_weight(0.1);
     tool.set_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
     tool.print(filename);
 

@@ -85,7 +85,12 @@ public:
             "Adds terms to the objective to minimize final value of "
             "frontLegs, backLegs, and related speeds.");
 
-    OpenSim_DECLARE_PROPERTY(initial_parameters_filename, string,
+    OpenSim_DECLARE_PROPERTY(relative_velaccel_weight, double,
+            "Weighting of velocity and acceleration objective terms, "
+            "relative to the configuration term for a given objective weight "
+            "above.");
+
+    OpenSim_DECLARE_OPTIONAL_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
             "optimization parameters. If not provided, initial parameters are "
             "all 0.0, and this element must be DELETED from the XML file "
@@ -125,7 +130,8 @@ public:
         constructProperty_posterior_legs_down_weight(1.0);
         constructProperty_sagittal_symmetry_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
-        constructProperty_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
+        constructProperty_relative_velaccel_weight(1.0);
+        constructProperty_initial_parameters_filename("");
     }
 
 };
@@ -361,17 +367,18 @@ public:
         double twistAccel = coordinates.get("twist").getAccelerationValue(aState);
 		double hunch = coordinates.get("hunch").getValue(aState);
 		double pitch = coordinates.get("pitch").getValue(aState);
+        double relw = _tool.get_relative_velaccel_weight();
         // ====================================================================
         f = 0;
         if (_tool.get_anterior_legs_down_weight() != 0.0)
         {
             f += _tool.get_anterior_legs_down_weight() * (
-                pow(roll - Pi, 2) + pow(rollRate, 2) + pow(rollAccel, 2));
+                pow(roll - Pi, 2) + relw * pow(rollRate, 2) + relw * pow(rollAccel, 2));
         }
         if (_tool.get_posterior_legs_down_weight() != 0.0)
         {
             f += _tool.get_posterior_legs_down_weight() * (
-                pow(twist - 0.0, 2) + pow(twistRate, 2) + pow(twistAccel, 2));
+                pow(twist - 0.0, 2) + relw * pow(twistRate, 2) + relw * pow(twistAccel, 2));
         }
         if (_tool.get_sagittal_symmetry_weight() != 0.0)
         {
@@ -389,9 +396,9 @@ public:
             // TODO want the dot(X-axis of each leg frame, global Y-axis) to be zero (i.e., legs
 			// straight down)
 			f += _tool.get_legs_prepared_for_landing_weight() * (
-                pow(frontLegs, 2) + pow(frontLegsRate, 2) + pow(frontLegsAccel, 2));
+                pow(frontLegs, 2) + relw * pow(frontLegsRate, 2) + relw * pow(frontLegsAccel, 2));
             f += _tool.get_legs_prepared_for_landing_weight() * (
-                pow(backLegs, 2) + pow(backLegsRate, 2) + pow(backLegsAccel, 2));
+                pow(backLegs, 2) + relw * pow(backLegsRate, 2) + relw * pow(backLegsAccel, 2));
         }
         // ====================================================================
 
@@ -413,10 +420,16 @@ public:
                 _splinesBestYet[iFcn] = *_splines[iFcn];
         }
 
-        // If we just got worse, print out the best-yet splines.
+        // If we just got worse, print out the best-yet splines and
+        // current model. Note: current model is NOT "best yet", but the
+        // idea is that it'll be close.
         if (_lastCallWasBestYet && ~_thisCallIsBestYet)
+        {
+            // TODO pass in 'true' for nondimensionalize.
             printBestYetPrescribedControllerFunctionSet(
                     _name + "_best_yet_parameters.xml");
+            printModel(_name + "_best_yet.osim");
+        }
 
         // Print out to the terminal/console every so often.
         if (_objectiveCalls % 100 == 0)
