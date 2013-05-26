@@ -31,6 +31,7 @@ using SimTK::Pi;
 using SimTK::Rotation;
 using SimTK::Transform;
 using SimTK::Vec3;
+using SimTK::State;
 using SimTK::convertDegreesToRadians;
 
 /**
