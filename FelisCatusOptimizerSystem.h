@@ -84,6 +84,9 @@ public:
     OpenSim_DECLARE_PROPERTY(legs_prepared_for_landing_weight, double,
             "Adds terms to the objective to minimize final value of "
             "frontLegs, backLegs, and related speeds.");
+	OpenSim_DECLARE_PROPERTY(use_coordinate_limit_forces, bool,
+            "TRUE: use coordinate limit forces, "
+			"FALSE: ignore coordinate limit forces");
 
     OpenSim_DECLARE_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
@@ -118,13 +121,14 @@ public:
     {
         constructProperty_results_directory("results");
         constructProperty_model_filename("feliscatus_*FILL THIS IN*.osim");
-        constructProperty_duration(0.8);
-        constructProperty_optimizer_algorithm("InteriorPoint");
+        constructProperty_duration(1.0);
+        constructProperty_optimizer_algorithm("BestAvailable");
         constructProperty_num_optim_spline_points(5);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
         constructProperty_sagittal_symmetry_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
+		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
     }
 
@@ -334,6 +338,19 @@ public:
 
         // --- Run a forward dynamics simulation.
         State& initState = _cat.initSystem();
+
+		// Disable coordinate limit forces?
+		if (!_tool.get_use_coordinate_limit_forces())
+        { // Loop over all forces in model.
+			for (int iFor = 0; iFor < _cat.getForceSet().getSize(); iFor++)
+			{
+				CoordinateLimitForce * LF = dynamic_cast<CoordinateLimitForce *> (&_cat.updForceSet().get(iFor));
+				if (LF)
+				{ // If it is a limit force, disable it.
+					_cat.updForceSet().get(iFor).setDisabled(initState, true);
+				}
+			}
+		}
 
         // Construct an integrator.
         SimTK::RungeKuttaMersonIntegrator integrator(_cat.getMultibodySystem());

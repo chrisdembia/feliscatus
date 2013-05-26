@@ -32,7 +32,7 @@ public:
 
 private:
 
-	static const int maxTorque = 100; // N-m
+	static const int maxTorque = 20; // N-m
 };
 
 int main(int argc, char *argv[])
@@ -247,7 +247,7 @@ void FelisCatusModel::addTwist()
 	cat.addForce(twistAct);
 
 	// Set twist limit force.
-	OpenSim::CoordinateLimitForce * twistLimitForce = 
+	CoordinateLimitForce * twistLimitForce = 
 		new CoordinateLimitForce("twist", 80, 1.0E6, -80, 1.0E6, 1.0E5, 5.0, false);
 	cat.addForce(twistLimitForce);
 }
@@ -267,7 +267,7 @@ void FelisCatusModel::addHunch()
 	cat.addForce(hunchAct);
 
 	// Set hunch limit force
-	OpenSim::CoordinateLimitForce * hunchLimitForce = 
+	CoordinateLimitForce * hunchLimitForce = 
 		new CoordinateLimitForce("hunch", 90, 1.0E6, -20, 1.0E6, 1.0E5, 5.0, false);
 	cat.addForce(hunchLimitForce);
 }
@@ -285,8 +285,8 @@ void FelisCatusModel::addWag()
 	cat.addForce(wagAct);
 
 	// Set wag limit force.
-	OpenSim::CoordinateLimitForce * wagLimitForce = 
-		new CoordinateLimitForce("hunch", 45, 1.0E6, -45, 1.0E6, 1.0E5, 5.0, false);
+	CoordinateLimitForce * wagLimitForce = 
+		new CoordinateLimitForce("wag", 45, 1.0E6, -45, 1.0E6, 1.0E5, 5.0, false);
 	cat.addForce(wagLimitForce);
 }
 
