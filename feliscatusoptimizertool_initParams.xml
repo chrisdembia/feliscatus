@@ -9,33 +9,33 @@
 			<!--flip, braking.-->
 			<SimmSpline name="twist_actuator">
 				<x> 0 0.2 0.4 0.6 0.8</x>
-				<y> 0.0 1.0 -0.2 -1.0 0.5</y>
+				<y> 0.0 0.1 -0.02 -0.1 0.05</y>
 			</SimmSpline>
 			
 			<!--Gentle spine straightening, hunch for impact, stop hunching.-->
 			<SimmSpline name="hunch_actuator">
 				<x> 0 0.2 0.4 0.6 0.8</x>
-				<y> 0.0 -0.3 0.0 0.5 -0.3</y>
+				<y> 0.0 -0.03 0.0 0.05 -0.03</y>
 			</SimmSpline>
 			
 			<!--Gentle wagging back and forth.-->
 			<SimmSpline name="wag_actuator">
 				<x> 0 0.2 0.4 0.6 0.8</x>
-				<y> 0.0 -0.2 0.0 0.2 0.0</y>
+				<y> 0.0 -0.02 0.0 0.02 0.0</y>
 			</SimmSpline>
 			
 			<!--Pull in (starting before twist), push out for "Superman", pull-->
 			<!--back in for landing.-->
 			<SimmSpline name="frontLegs_actuator">
 				<x> 0 0.2 0.4 0.6 0.8</x>
-				<y> -0.25 -0.8 0.25 0.8 -0.4</y>
+				<y> -0.025 -0.08 0.025 0.08 -0.04</y>
 			</SimmSpline>
 			
 			<!--No action to start, push out for "Superman", pull back in for
 			<!--landing.-->
 			<SimmSpline name="backLegs_actuator">
 				<x> 0 0.2 0.4 0.6 0.8</x>
-				<y> 0.0 0.0 0.5 0.8 -0.5</y>
+				<y> 0.0 0.0 0.05 0.08 -0.05</y>
 			</SimmSpline>
 		</objects>
 		<groups />
