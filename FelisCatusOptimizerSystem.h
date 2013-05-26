@@ -144,6 +144,7 @@ public:
  * a spline trajectory for all actuators.
  * TODO describe how the parameters are ordered.
  * */
+
 class FelisCatusOptimizerSystem : public OptimizerSystem
 {
 public:
@@ -262,23 +263,27 @@ public:
 
             // This loop is set up so that, hopefully, the initFcns set's
             // functions do not need to be ordered in the same way as the
-            // optimization parameters are.
-            for (int iFcn = 0; iFcn < initNames.getSize(); iFcn++)
-            { // Loop through each init function by name.
+            // optimization parameters are. Also, the number of initFcns
+			// specified by the initialization file can be greater than the
+			// number of actuators in the model (assuming that the initial-
+			// ization file AT LEAST contains the model's actuators).
+            for (int iAct = 0; iAct < _numActuators; iAct++)
+            { // Loop through the actuators in the model.
 
-                // Get index in the model of the actuator with this name.
-                int iAct = _cat.getActuators().getIndex(initNames[iFcn]);
+                // Get index of the initFcn corresponding to the actuator.
+				int iFcn = initFcns.getIndex(_cat.getActuators().get(iAct).getName());
 
                 // Get access to the spline's methods.
                 SimmSpline * fcn =
-                    dynamic_cast<SimmSpline *>(&initFcns.get(iAct));
+                    dynamic_cast<SimmSpline *>(&initFcns.get(iFcn));
 
                 for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
                 {
                     // Find the right index in the optimization parameters.
                     int paramIndex = iAct * _numOptimSplinePoints + iPts;
 
-                    // Finally, transfer y value from input to init parameters.
+                    // Finally, transfer y value from input to init parameters,
+					// scaled by maximum torque.
                     initParams[paramIndex] = fcn->getY(iPts);
                 }
             }
