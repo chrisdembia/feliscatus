@@ -72,6 +72,9 @@ int main(int argc, char *argv[])
     // Integrate from initial time to final time
     manager.setInitialTime(0);
     manager.setFinalTime(1.0);
+
+    sleep(1.0);
+
     manager.integrate(initState);
 
     // Memory management.
