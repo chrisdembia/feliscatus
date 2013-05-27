@@ -32,7 +32,7 @@ public:
 
 private:
 
-	static const int maxTorque = 100; // N-m
+	static const int maxTorque = 20; // N-m
 };
 
 int main(int argc, char *argv[])
@@ -163,7 +163,7 @@ void FelisCatusModel::createBaseCase()
     // pitch
     double groundAnteriorCS1range[2] = {-Pi, Pi};
     groundAnteriorCS[1].setRange(groundAnteriorCS1range);
-    groundAnteriorCS[1].setDefaultValue(convertDegreesToRadians(-15));
+    groundAnteriorCS[1].setDefaultValue(0);
     groundAnteriorCS[1].setDefaultLocked(false);
     // roll
     double groundAnteriorCS2range[2] = {-Pi, Pi};
@@ -216,7 +216,7 @@ void FelisCatusModel::createBaseCase()
     double anteriorPosteriorCS0range[2] = {convertDegreesToRadians(-20),
 										   convertDegreesToRadians(90)};  // -20/+90 deg
     anteriorPosteriorCS[0].setRange(anteriorPosteriorCS0range);
-    anteriorPosteriorCS[0].setDefaultValue(convertDegreesToRadians(30));
+    anteriorPosteriorCS[0].setDefaultValue(0);
     anteriorPosteriorCS[0].setDefaultLocked(true);
 	// wag
     double anteriorPosteriorCS1range[2] = {-0.25 * Pi, 0.25 * Pi};   // +/- 45 deg
@@ -247,15 +247,17 @@ void FelisCatusModel::addTwist()
 	cat.addForce(twistAct);
 
 	// Set twist limit force.
-	OpenSim::CoordinateLimitForce * twistLimitForce = 
+	CoordinateLimitForce * twistLimitForce = 
 		new CoordinateLimitForce("twist", 80, 1.0E6, -80, 1.0E6, 1.0E5, 5.0, false);
 	cat.addForce(twistLimitForce);
 }
 
 void FelisCatusModel::addHunch()
 {
-	// Unlock hunch.
+	// Unlock hunch and change default so that cat is initially hunched.
 	cat.updCoordinateSet().get("hunch").setDefaultLocked(false);
+	cat.updCoordinateSet().get("hunch").setDefaultValue(convertDegreesToRadians(30));
+	cat.updCoordinateSet().get("pitch").setDefaultValue(convertDegreesToRadians(-15));
 	
 	// Add hunch actuator.
 	CoordinateActuator * hunchAct = new CoordinateActuator("hunch");
@@ -265,7 +267,7 @@ void FelisCatusModel::addHunch()
 	cat.addForce(hunchAct);
 
 	// Set hunch limit force
-	OpenSim::CoordinateLimitForce * hunchLimitForce = 
+	CoordinateLimitForce * hunchLimitForce = 
 		new CoordinateLimitForce("hunch", 90, 1.0E6, -20, 1.0E6, 1.0E5, 5.0, false);
 	cat.addForce(hunchLimitForce);
 }
@@ -283,8 +285,8 @@ void FelisCatusModel::addWag()
 	cat.addForce(wagAct);
 
 	// Set wag limit force.
-	OpenSim::CoordinateLimitForce * wagLimitForce = 
-		new CoordinateLimitForce("hunch", 45, 1.0E6, -45, 1.0E6, 1.0E5, 5.0, false);
+	CoordinateLimitForce * wagLimitForce = 
+		new CoordinateLimitForce("wag", 45, 1.0E6, -45, 1.0E6, 1.0E5, 5.0, false);
 	cat.addForce(wagLimitForce);
 }
 
@@ -293,7 +295,9 @@ void FelisCatusModel::addRigidLegs()
 	Vec3 locALegsInAnterior(-0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
     Vec3 orientALegsInAnterior(0);
     Vec3 locALegsInLegs(0);
-    Vec3 orientALegsInLegs(0, 0, -0.5 * Pi - convertDegreesToRadians(10));
+	State& state = cat.initSystem();
+	double pitch = cat.getCoordinateSet().get("pitch").getValue(state);
+    Vec3 orientALegsInLegs(0, 0, -0.5 * Pi + pitch);
     WeldJoint * anteriorToLegs = new WeldJoint("anterior_legs",
             *anteriorBody, locALegsInAnterior, orientALegsInAnterior,
             *anteriorLegs, locALegsInLegs, orientALegsInLegs);
@@ -301,7 +305,8 @@ void FelisCatusModel::addRigidLegs()
 	Vec3 locPLegsInPosterior(0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
     Vec3 orientPLegsInPosterior(0, Pi, 0);
     Vec3 locPLegsInLegs(0);
-    Vec3 orientPLegsInLegs(0, 0, -0.5 * Pi - convertDegreesToRadians(10));
+	
+    Vec3 orientPLegsInLegs(0, 0, -0.5 * Pi + pitch);
     WeldJoint * posteriorToLegs = new WeldJoint("posterior_legs",
             *posteriorBody, locPLegsInPosterior, orientPLegsInPosterior,
             *posteriorLegs, locPLegsInLegs, orientPLegsInLegs);
@@ -324,9 +329,11 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
     anteriorToLegsCS[0].setName("frontLegs");
     double anteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
     anteriorToLegsCS[0].setRange(anteriorToLegsCS0range);
-    if (frontLegsRetract)
+    State& state = cat.initSystem();
+	double pitch = cat.getCoordinateSet().get("pitch").getValue(state);
+	if (frontLegsRetract)
     {
-        anteriorToLegsCS[0].setDefaultValue(convertDegreesToRadians(10));
+        anteriorToLegsCS[0].setDefaultValue(-pitch);
         anteriorToLegsCS[0].setDefaultLocked(false);
     }
     else
@@ -346,7 +353,7 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
     posteriorToLegsCS[0].setName("backLegs");
     double posteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
     posteriorToLegsCS[0].setRange(posteriorToLegsCS0range);
-    posteriorToLegsCS[0].setDefaultValue(convertDegreesToRadians(10));
+    posteriorToLegsCS[0].setDefaultValue(-pitch);
     posteriorToLegsCS[0].setDefaultLocked(false);
 
 	cat.addBody(anteriorLegs);

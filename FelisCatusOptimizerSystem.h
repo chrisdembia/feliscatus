@@ -85,6 +85,9 @@ public:
     OpenSim_DECLARE_PROPERTY(legs_prepared_for_landing_weight, double,
             "Adds terms to the objective to minimize final value of "
             "frontLegs, backLegs, and related speeds.");
+	OpenSim_DECLARE_PROPERTY(use_coordinate_limit_forces, bool,
+            "TRUE: use coordinate limit forces, "
+			"FALSE: ignore coordinate limit forces");
 
     OpenSim_DECLARE_PROPERTY(relative_velaccel_weight, double,
             "Weighting of velocity and acceleration objective terms, "
@@ -128,13 +131,14 @@ public:
     {
         constructProperty_results_directory("results");
         constructProperty_model_filename("feliscatus_*FILL THIS IN*.osim");
-        constructProperty_duration(0.8);
-        constructProperty_optimizer_algorithm("InteriorPoint");
+        constructProperty_duration(1.0);
+        constructProperty_optimizer_algorithm("BestAvailable");
         constructProperty_num_optim_spline_points(5);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
         constructProperty_sagittal_symmetry_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
+		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_relative_velaccel_weight(1.0);
         constructProperty_large_twist_penalty_weight(0.0);
         constructProperty_initial_parameters_filename("");
@@ -231,9 +235,6 @@ public:
             flipController->prescribeControlForActuator(i, _splines[i]);
         }
 
-        // Add a Kinematics analysis to the model so we can obtain 
-        // generalized coordinate values at any point in a simulation.
-
         // Set (nondimensional) parameter limits.
         Vector lowerLimits(getNumParameters(), -1.0);
         Vector upperLimits(getNumParameters(), 1.0);
@@ -277,23 +278,27 @@ public:
 
             // This loop is set up so that, hopefully, the initFcns set's
             // functions do not need to be ordered in the same way as the
-            // optimization parameters are.
-            for (int iFcn = 0; iFcn < initNames.getSize(); iFcn++)
-            { // Loop through each init function by name.
+            // optimization parameters are. Also, the number of initFcns
+			// specified by the initialization file can be greater than the
+			// number of actuators in the model (assuming that the initial-
+			// ization file AT LEAST contains the model's actuators).
+            for (int iAct = 0; iAct < _numActuators; iAct++)
+            { // Loop through the actuators in the model.
 
-                // Get index in the model of the actuator with this name.
-                int iAct = _cat.getActuators().getIndex(initNames[iFcn]);
+                // Get index of the initFcn corresponding to the actuator.
+				int iFcn = initFcns.getIndex(_cat.getActuators().get(iAct).getName());
 
                 // Get access to the spline's methods.
                 SimmSpline * fcn =
-                    dynamic_cast<SimmSpline *>(&initFcns.get(iAct));
+                    dynamic_cast<SimmSpline *>(&initFcns.get(iFcn));
 
                 for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
                 {
                     // Find the right index in the optimization parameters.
                     int paramIndex = iAct * _numOptimSplinePoints + iPts;
 
-                    // Finally, transfer y value from input to init parameters.
+                    // Finally, transfer y value from input to init parameters,
+					// scaled by maximum torque.
                     initParams[paramIndex] = fcn->getY(iPts);
                 }
             }
@@ -344,6 +349,19 @@ public:
 
         // --- Run a forward dynamics simulation.
         State& initState = _cat.initSystem();
+
+		// Disable coordinate limit forces?
+		if (!_tool.get_use_coordinate_limit_forces())
+        { // Loop over all forces in model.
+			for (int iFor = 0; iFor < _cat.getForceSet().getSize(); iFor++)
+			{
+				CoordinateLimitForce * LF = dynamic_cast<CoordinateLimitForce *> (&_cat.updForceSet().get(iFor));
+				if (LF)
+				{ // If it is a limit force, disable it.
+					_cat.updForceSet().get(iFor).setDisabled(initState, true);
+				}
+			}
+		}
 
         // Construct an integrator.
         SimTK::RungeKuttaMersonIntegrator integrator(_cat.getMultibodySystem());

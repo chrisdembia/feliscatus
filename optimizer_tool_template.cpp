@@ -18,13 +18,14 @@ int main(int argc, char * argv[])
     FelisCatusOptimizerTool tool;
     tool.set_results_directory("results");
     tool.set_model_filename("feliscatus_*FILL THIS IN*.osim");
-    tool.set_duration(0.8);
-    tool.set_optimizer_algorithm("InteriorPoint");
+    tool.set_duration(1.0);
+    tool.set_optimizer_algorithm("BestAvailable");
     tool.set_num_optim_spline_points(5);
     tool.set_anterior_legs_down_weight(1.0);
     tool.set_posterior_legs_down_weight(1.0);
     tool.set_sagittal_symmetry_weight(1.0);
     tool.set_legs_prepared_for_landing_weight(1.0);
+	tool.set_use_coordinate_limit_forces(true);
     tool.set_relative_velaccel_weight(0.1);
     tool.set_large_twist_penalty_weight(0.0);
     tool.set_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
