@@ -32,6 +32,7 @@ using OpenSim::Model;
 using OpenSim::PrescribedController;
 using OpenSim::Set;
 using OpenSim::SimmSpline;
+using OpenSim::Storage;
 
 using SimTK::OptimizerSystem;
 using SimTK::Pi;
@@ -90,6 +91,10 @@ public:
             "relative to the configuration term for a given objective weight "
             "above.");
 
+    OpenSim_DECLARE_PROPERTY(large_twist_penalty_weight, double,
+            "Weighting on penalty for twist being below -Pi/2 or above 3Pi/2 "
+            "at any point in the simulation.");
+
     OpenSim_DECLARE_OPTIONAL_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
             "optimization parameters. If not provided, initial parameters are "
@@ -131,6 +136,7 @@ public:
         constructProperty_sagittal_symmetry_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
         constructProperty_relative_velaccel_weight(1.0);
+        constructProperty_large_twist_penalty_weight(0.0);
         constructProperty_initial_parameters_filename("");
     }
 
@@ -224,6 +230,9 @@ public:
             // Tell the controller about this function.
             flipController->prescribeControlForActuator(i, _splines[i]);
         }
+
+        // Add a Kinematics analysis to the model so we can obtain 
+        // generalized coordinate values at any point in a simulation.
 
         // Set (nondimensional) parameter limits.
         Vector lowerLimits(getNumParameters(), -1.0);
@@ -399,6 +408,39 @@ public:
                 pow(frontLegs, 2) + relw * pow(frontLegsRate, 2) + relw * pow(frontLegsAccel, 2));
             f += _tool.get_legs_prepared_for_landing_weight() * (
                 pow(backLegs, 2) + relw * pow(backLegsRate, 2) + relw * pow(backLegsAccel, 2));
+        }
+
+        // Conditions that do not just depend on final state.
+        // NOTE: MUST ADD ALL NEED-STATE-STORAGE conditions to this boolean.
+        bool needStateStorage =
+            (_tool.get_large_twist_penalty_weight() != 0.0);
+
+        if (needStateStorage)
+        {
+            Storage stateSto = manager.getStateStorage();
+
+            if (_tool.get_large_twist_penalty_weight() != 0.0)
+            {
+                Array<double> twistHist;
+                stateSto.getDataColumn("twist", twistHist);
+                double maxTwist = -SimTK::Infinity;
+                double minTwist = SimTK::Infinity;
+                for (int iT = 0; iT < twistHist.getSize(); iT++)
+                {
+                    // Assumes angles are in radians.
+                    maxTwist = std::max(maxTwist, twistHist[iT] - 1.5 * Pi);
+                    minTwist = std::min(minTwist, twistHist[iT] - (-0.5 * Pi));
+                }
+                if (maxTwist > 0)
+                { // Wouldn't want to add in a negative contribution.
+                    f += _tool.get_large_twist_penalty_weight() * pow(maxTwist, 2);
+                }
+                if (minTwist < 0)
+                {
+                    // Must negate so that this contribution to f is positive.
+                    f += _tool.get_large_twist_penalty_weight() * pow(minTwist, 2);
+                }
+            }
         }
         // ====================================================================
 

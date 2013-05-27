@@ -78,7 +78,7 @@ int main(int argc, char * argv[])
             sys.printPrescribedControllerFunctionSet(
                     name + "_optimized_parameters.xml");
 
-            cout << "Done! f = " << f << endl;
+            cout << "Done with " << name << "! f = " << f << endl;
         }
         catch (...)
         {
