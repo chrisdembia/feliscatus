@@ -465,7 +465,7 @@ public:
             f += _tool.get_yaw_weight() * (
 				pow(yaw - yawGoal, 2) + relw * pow(yawRate, 2) + relw * pow(yawAccel, 2));
         }
-        if (_tool.get_legs_separation_weight() != 0.0 || _tool.get_legs_prepared_for_landing_weight() != 0.0)
+        if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
         {
             // These values may not be available for all models.
             double frontLegs = coordinates.get("frontLegs").getValue(aState);
@@ -475,9 +475,6 @@ public:
             double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
             double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
             
-			double legsSep = _tool.get_legs_separation();
-			f += _tool.get_legs_separation_weight() * pow(frontLegs + backLegs - legsSep,2);
-
 			// TODO want the dot(X-axis of each leg frame, global Y-axis) to be zero (i.e., legs
 			// straight down)
 			f += _tool.get_legs_prepared_for_landing_weight() * (
@@ -489,11 +486,16 @@ public:
         // Conditions that do not just depend on final state.
         // NOTE: MUST ADD ALL NEED-STATE-STORAGE conditions to this boolean.
         bool needStateStorage =
-            (_tool.get_large_twist_penalty_weight() != 0.0);
+            (_tool.get_legs_separation_weight() != 0.0 || _tool.get_large_twist_penalty_weight() != 0.0);
 
         if (needStateStorage)
         {
             Storage stateSto = manager.getStateStorage();
+
+			// LEGS SHOULD BE SEPARATED BY SPECIFIED ANGLE THROUGHOUT MOTION, NOT
+			// JUST AT FINAL TIME
+			//double legsSep = _tool.get_legs_separation();
+			//f += _tool.get_legs_separation_weight() * pow(frontLegs + backLegs - legsSep,2);
 
             if (_tool.get_large_twist_penalty_weight() != 0.0)
             {
