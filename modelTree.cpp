@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
             {
                 for (int iL = 0; iL < whichLegs.size(); iL++)
                 {
-                    for (int iT = 0; iT < whichLegs.size(); iT++)
+                    for (int iT = 0; iT < whichTail.size(); iT++)
                     {
                         string modifier = "_";
                         modifier += canTwist[it] ? "Twist" : "";
