@@ -59,14 +59,14 @@ class FelisCatusOptimizerTool : public Object {
 OpenSim_DECLARE_CONCRETE_OBJECT(FelisCatusOptimizerTool, Object);
 public:
     OpenSim_DECLARE_PROPERTY(results_directory, string,
-            "Directory in which to save optimization log and results.");
+            "Directory in which to save optimization log and results");
     OpenSim_DECLARE_PROPERTY(model_filename, string,
-            "Specifies path to model file, WITH .osim extension.");
+            "Specifies path to model file, WITH .osim extension");
     OpenSim_DECLARE_PROPERTY(duration, double,
-            "Duration of forward dynamics simulation (seconds).");
+            "Duration of forward dynamics simulation (seconds)");
     OpenSim_DECLARE_PROPERTY(optimizer_algorithm, string,
             "Enum, as a string, for the Optimizer algorithm to use "
-            "Options are BestAvailable, InteriorPoint, LBFGS, LBFGSB, CFSQP.")
+            "Options are BestAvailable, InteriorPoint, LBFGS, LBFGSB, CFSQP")
     OpenSim_DECLARE_PROPERTY(num_optim_spline_points, int,
             "Number of points being optimized in each spline function. "
             "Constant across all splines. If an initial_parameters_filename is "
@@ -75,28 +75,44 @@ public:
 
     OpenSim_DECLARE_PROPERTY(anterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
-            "(roll - Pi) and related speeds.");
+            "(roll - Pi) and related speeds");
     OpenSim_DECLARE_PROPERTY(posterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
             "(twist - 0) and related speeds");
-    OpenSim_DECLARE_PROPERTY(sagittal_symmetry_weight, double,
+	OpenSim_DECLARE_PROPERTY(hunch_value, double,
+            "Final value for hunch coordinate (radians)");
+	OpenSim_DECLARE_PROPERTY(hunch_weight, double,
+            "Adds a term to the objective to minimize final difference "
+            "between hunch and the specified hunch value, as well as the "
+			"related speeds");
+	OpenSim_DECLARE_PROPERTY(sagittal_symmetry_weight, double,
             "Adds a term to the objective to minimize final value of "
-            "(hunch - 2 * pitch)");
+            "(hunch + 2 * pitch)");
+	OpenSim_DECLARE_PROPERTY(wag_value, double,
+            "Final value for wag coordinate (radians)");
+	OpenSim_DECLARE_PROPERTY(wag_weight, double,
+            "Adds a term to the objective to minimize final difference "
+            "between wag and the specified wag value, as well as the "
+			"related speeds");
+	OpenSim_DECLARE_PROPERTY(yaw_value, double,
+            "Final value for yaw coordinate (radians)");
+	OpenSim_DECLARE_PROPERTY(yaw_weight, double,
+            "Adds a term to the objective to minimize final difference "
+            "between yaw and the specified yaw value, as well as the "
+			"related speeds");
     OpenSim_DECLARE_PROPERTY(legs_prepared_for_landing_weight, double,
             "Adds terms to the objective to minimize final value of "
-            "frontLegs, backLegs, and related speeds.");
+            "frontLegs, backLegs, and related speeds");
 	OpenSim_DECLARE_PROPERTY(use_coordinate_limit_forces, bool,
             "TRUE: use coordinate limit forces, "
 			"FALSE: ignore coordinate limit forces");
-
     OpenSim_DECLARE_PROPERTY(relative_velaccel_weight, double,
             "Weighting of velocity and acceleration objective terms, "
             "relative to the configuration term for a given objective weight "
-            "above.");
-
+            "above");
     OpenSim_DECLARE_PROPERTY(large_twist_penalty_weight, double,
             "Weighting on penalty for twist being below -Pi/2 or above 3Pi/2 "
-            "at any point in the simulation.");
+            "at any point in the simulation");
 
     OpenSim_DECLARE_OPTIONAL_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
@@ -133,10 +149,16 @@ public:
         constructProperty_model_filename("feliscatus_*FILL THIS IN*.osim");
         constructProperty_duration(1.0);
         constructProperty_optimizer_algorithm("BestAvailable");
-        constructProperty_num_optim_spline_points(5);
+        constructProperty_num_optim_spline_points(10);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
-        constructProperty_sagittal_symmetry_weight(1.0);
+		constructProperty_hunch_value(Pi/4);
+		constructProperty_hunch_weight(1.0);
+		constructProperty_sagittal_symmetry_weight(1.0);
+		constructProperty_wag_value(0.0);
+		constructProperty_wag_weight(1.0);
+		constructProperty_yaw_value(0.0);
+		constructProperty_yaw_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
 		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_relative_velaccel_weight(1.0);
@@ -150,14 +172,9 @@ public:
 
 /**
  * Finds a control input/trajectory that achieves certain desired
- * features of a cat's flipping maneuver. The optimizer system can operate on
- * different cat models, so long as they possess the following:
- * 
- *      1. a 'roll' coordinate equal to PI radians when anterior legs down.
- *      2. a 'twist' coordinate equal to 0 when posterior legs down.
- *
- * The control of the system is performed via a PrescribedController that uses
- * a spline trajectory for all actuators.
+ * features of a cat's flipping maneuver. The control of the system
+ * is performed via a PrescribedController that uses a spline trajectory
+ * for all actuators.
  * TODO describe how the parameters are ordered.
  * */
 class FelisCatusOptimizerSystem : public OptimizerSystem
@@ -392,8 +409,21 @@ public:
         double twist = coordinates.get("twist").getValue(aState);
         double twistRate = coordinates.get("twist").getSpeedValue(aState);
         double twistAccel = coordinates.get("twist").getAccelerationValue(aState);
+		double hunchGoal = _tool.get_hunch_value();
 		double hunch = coordinates.get("hunch").getValue(aState);
+		double hunchRate = coordinates.get("hunch").getSpeedValue(aState);
+        double hunchAccel = coordinates.get("hunch").getAccelerationValue(aState);
 		double pitch = coordinates.get("pitch").getValue(aState);
+		double pitchRate = coordinates.get("pitch").getSpeedValue(aState);
+        double pitchAccel = coordinates.get("pitch").getAccelerationValue(aState);
+		double wagGoal = _tool.get_wag_value();
+		double wag = coordinates.get("wag").getValue(aState);
+		double wagRate = coordinates.get("wag").getSpeedValue(aState);
+        double wagAccel = coordinates.get("wag").getAccelerationValue(aState);
+		double yawGoal = _tool.get_yaw_value();
+		double yaw = coordinates.get("yaw").getValue(aState);
+		double yawRate = coordinates.get("yaw").getSpeedValue(aState);
+        double yawAccel = coordinates.get("yaw").getAccelerationValue(aState);
         double relw = _tool.get_relative_velaccel_weight();
         // ====================================================================
         f = 0;
@@ -407,9 +437,25 @@ public:
             f += _tool.get_posterior_legs_down_weight() * (
                 pow(twist - 0.0, 2) + relw * pow(twistRate, 2) + relw * pow(twistAccel, 2));
         }
-        if (_tool.get_sagittal_symmetry_weight() != 0.0)
+		if (_tool.get_hunch_weight() != 0.0)
         {
-            f += _tool.get_sagittal_symmetry_weight() * (pow(hunch + 2 * pitch, 2));
+            f += _tool.get_hunch_weight() * (
+				pow(hunch - hunchGoal, 2) + relw * pow(hunchRate, 2) + relw * pow(hunchAccel, 2));
+        }
+		if (_tool.get_sagittal_symmetry_weight() != 0.0)
+        {
+            f += _tool.get_sagittal_symmetry_weight() * (
+				pow(hunch + 2 * pitch, 2) + relw * pow(pitchRate, 2) + relw * pow(pitchAccel, 2));
+        }
+		if (_tool.get_wag_weight() != 0.0)
+        {
+            f += _tool.get_wag_weight() * (
+				pow(wag - wagGoal, 2) + relw * pow(wagRate, 2) + relw * pow(wagAccel, 2));
+        }
+		if (_tool.get_yaw_weight() != 0.0)
+        {
+            f += _tool.get_yaw_weight() * (
+				pow(yaw - yawGoal, 2) + relw * pow(yawRate, 2) + relw * pow(yawAccel, 2));
         }
         if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
         {
