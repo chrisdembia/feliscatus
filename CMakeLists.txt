@@ -113,6 +113,9 @@ ADD_EXECUTABLE(optimizer_tool_template
     FelisCatusOptimizerSystem.h
     )
 TARGET_LINK_LIBRARIES(optimizer_tool_template ${OSIM_LIBRARIES})
+
+ADD_EXECUTABLE(prescribe prescribe.cpp)
+TARGET_LINK_LIBRARIES(prescribe ${OSIM_LIBRARIES})
 	
 # ----- Old script stuff for reference.
 
