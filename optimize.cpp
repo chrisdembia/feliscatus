@@ -60,7 +60,7 @@ int main(int argc, char * argv[])
         // TODO choose tolerance better.
         opt.setConvergenceTolerance(0.01);
         opt.useNumericalGradient(true);
-        opt.setMaxIterations(1000);
+        opt.setMaxIterations(100000);
         opt.setLimitedMemoryHistory(500);
 
         // Initialize parameters for the optimization to be zero.
