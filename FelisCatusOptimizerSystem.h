@@ -211,6 +211,9 @@ public:
         _optLog << ctime(&rawtime);
         _optLog << "Model file name: " << _tool.get_model_filename() << endl;
 
+        // Create the objective terms log.
+        _objLog.open((_name + "/" + _name + "_objlog.txt").c_str(), ofstream::out);
+
         // Compute the number of optimization parameters we'll have.
         _numActuators = _cat.getActuators().getSize();
         int numParameters = _numActuators * _numOptimSplinePoints;
@@ -399,6 +402,9 @@ public:
         // --------------------------------------------------------------------
 
         // --- Construct the objective function, term by term.
+        // Will be writing to a lg.
+        if (_objectiveCalls % _objLogPeriod == 0)
+            _objLog << _objectiveCalls << " ";
         // Create a copy of the init state; we need a state consistent with model.
         State aState = initState;
         _cat.getMultibodySystem().realize(aState, Stage::Acceleration);
@@ -429,33 +435,51 @@ public:
         f = 0;
         if (_tool.get_anterior_legs_down_weight() != 0.0)
         {
-            f += _tool.get_anterior_legs_down_weight() * (
+            double term = _tool.get_anterior_legs_down_weight() * (
                 pow(roll - Pi, 2) + relw * pow(rollRate, 2) + relw * pow(rollAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " anterior_legs_down " << term;
+            f += term;
         }
         if (_tool.get_posterior_legs_down_weight() != 0.0)
         {
-            f += _tool.get_posterior_legs_down_weight() * (
+            double term = _tool.get_posterior_legs_down_weight() * (
                 pow(twist - 0.0, 2) + relw * pow(twistRate, 2) + relw * pow(twistAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " posterior_legs_down " << term;
+            f += term;
         }
 		if (_tool.get_hunch_weight() != 0.0)
         {
-            f += _tool.get_hunch_weight() * (
+            double term = _tool.get_hunch_weight() * (
 				pow(hunch - hunchGoal, 2) + relw * pow(hunchRate, 2) + relw * pow(hunchAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " hunch " << term;
+            f += term;
         }
 		if (_tool.get_sagittal_symmetry_weight() != 0.0)
         {
-            f += _tool.get_sagittal_symmetry_weight() * (
+            double term = _tool.get_sagittal_symmetry_weight() * (
 				pow(hunch + 2 * pitch, 2) + relw * pow(pitchRate, 2) + relw * pow(pitchAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " sagittal_symmetry " << term;
+            f += term;
         }
 		if (_tool.get_wag_weight() != 0.0)
         {
-            f += _tool.get_wag_weight() * (
+            double term = _tool.get_wag_weight() * (
 				pow(wag - wagGoal, 2) + relw * pow(wagRate, 2) + relw * pow(wagAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " wag " << term;
+            f += term;
         }
 		if (_tool.get_yaw_weight() != 0.0)
         {
-            f += _tool.get_yaw_weight() * (
+            double term = _tool.get_yaw_weight() * (
 				pow(yaw - yawGoal, 2) + relw * pow(yawRate, 2) + relw * pow(yawAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " yaw " << term;
+            f += term;
         }
         if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
         {
@@ -468,10 +492,13 @@ public:
             double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
             // TODO want the dot(X-axis of each leg frame, global Y-axis) to be zero (i.e., legs
 			// straight down)
-			f += _tool.get_legs_prepared_for_landing_weight() * (
+			double termA = _tool.get_legs_prepared_for_landing_weight() * (
                 pow(frontLegs, 2) + relw * pow(frontLegsRate, 2) + relw * pow(frontLegsAccel, 2));
-            f += _tool.get_legs_prepared_for_landing_weight() * (
+            double termB = _tool.get_legs_prepared_for_landing_weight() * (
                 pow(backLegs, 2) + relw * pow(backLegsRate, 2) + relw * pow(backLegsAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " legs_prepared_for_landing " << termA + termB;
+            f += termA + termB;
         }
 
         // Conditions that do not just depend on final state.
@@ -495,15 +522,19 @@ public:
                     maxTwist = std::max(maxTwist, twistHist[iT] - 1.5 * Pi);
                     minTwist = std::min(minTwist, twistHist[iT] - (-0.5 * Pi));
                 }
+                double term = 0.0;
                 if (maxTwist > 0)
                 { // Wouldn't want to add in a negative contribution.
-                    f += _tool.get_large_twist_penalty_weight() * pow(maxTwist, 2);
+                    term += _tool.get_large_twist_penalty_weight() * pow(maxTwist, 2);
                 }
                 if (minTwist < 0)
                 {
                     // Must negate so that this contribution to f is positive.
-                    f += _tool.get_large_twist_penalty_weight() * pow(minTwist, 2);
+                    term += _tool.get_large_twist_penalty_weight() * pow(minTwist, 2);
                 }
+                if (_objectiveCalls % _objLogPeriod == 0)
+                    _objLog << " large_twist_penalty " << term;
+                f += term;
             }
         }
         // ====================================================================
@@ -512,12 +543,9 @@ public:
         _lastCallWasBestYet = _thisCallIsBestYet;
         _thisCallIsBestYet = f <= _objectiveFcnValueBestYet;
         if (_thisCallIsBestYet) _objectiveFcnValueBestYet = f;
-        _optLog << _objectiveCalls << " " << f << " " << _objectiveFcnValueBestYet;
-        for (int i = 0; i < parameters.size(); i++)
-        {
-            _optLog << " " << parameters[i];
-        }
-        _optLog << endl;
+        _optLog << _objectiveCalls << " " << f << " " << _objectiveFcnValueBestYet << endl;
+        if (_objectiveCalls % _objLogPeriod == 0)
+            _objLog << " objfcn " << f << " objfcn_best_yet " << _objectiveFcnValueBestYet << endl;
 
         // If this is the best yet, save a copy of the splines.
         if (_thisCallIsBestYet)
@@ -658,6 +686,12 @@ private:
 
     /// To record details of this run.
     mutable ofstream _optLog;
+
+    /// Individual terms of objective function.
+    mutable ofstream _objLog;
+
+    /// Period for how often objective terms are printed out to file.
+    static const int _objLogPeriod = 100;
 
     /// The best (lowest) value of the objective function, for logging.
     mutable double _objectiveFcnValueBestYet;
