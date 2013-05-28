@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
     vector<string> twistStrings;
 
     vector<FelisCatusModel::LegsType> whichLegs;
+    whichLegs.push_back(FelisCatusModel::None);
     whichLegs.push_back(FelisCatusModel::Rigid);
     whichLegs.push_back(FelisCatusModel::RetractBack);
     whichLegs.push_back(FelisCatusModel::Retract);
