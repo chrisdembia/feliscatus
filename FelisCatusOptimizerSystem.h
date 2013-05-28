@@ -534,6 +534,9 @@ public:
             // TODO pass in 'true' for nondimensionalize.
             printBestYetPrescribedControllerFunctionSet(
                     _name + "_best_yet_parameters.xml");
+            printBestYetPrescribedControllerFunctionSet(
+                    _name + "_best_yet_parameters_nomdim.xml",
+                    true);
             printModel(_name + "_best_yet.osim");
         }
 
