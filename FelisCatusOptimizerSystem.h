@@ -100,6 +100,12 @@ public:
             "Adds a term to the objective to minimize final difference "
             "between yaw and the specified yaw value, as well as the "
 			"related speeds");
+	OpenSim_DECLARE_PROPERTY(legs_separation, double,
+            "Angle between legs (radians) - if Pi/2, for example, one leg "
+			"pointed up forces the other to be aligned with the body");
+	OpenSim_DECLARE_PROPERTY(legs_separation_weight, double,
+            "Adds a term to the objective to force the legs to be separated "
+			"by the specified angle");
     OpenSim_DECLARE_PROPERTY(legs_prepared_for_landing_weight, double,
             "Adds terms to the objective to minimize final value of "
             "frontLegs, backLegs, and related speeds");
@@ -149,7 +155,7 @@ public:
         constructProperty_model_filename("feliscatus_*FILL THIS IN*.osim");
         constructProperty_duration(1.0);
         constructProperty_optimizer_algorithm("BestAvailable");
-        constructProperty_num_optim_spline_points(10);
+        constructProperty_num_optim_spline_points(20);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
 		constructProperty_hunch_value(Pi/4);
@@ -159,6 +165,8 @@ public:
 		constructProperty_wag_weight(1.0);
 		constructProperty_yaw_value(0.0);
 		constructProperty_yaw_weight(1.0);
+		constructProperty_legs_separation(Pi/2);
+		constructProperty_legs_separation_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
 		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_relative_velaccel_weight(1.0);
@@ -457,7 +465,7 @@ public:
             f += _tool.get_yaw_weight() * (
 				pow(yaw - yawGoal, 2) + relw * pow(yawRate, 2) + relw * pow(yawAccel, 2));
         }
-        if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
+        if (_tool.get_legs_separation_weight() != 0.0 || _tool.get_legs_prepared_for_landing_weight() != 0.0)
         {
             // These values may not be available for all models.
             double frontLegs = coordinates.get("frontLegs").getValue(aState);
@@ -466,7 +474,11 @@ public:
             double backLegs = coordinates.get("backLegs").getValue(aState);
             double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
             double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
-            // TODO want the dot(X-axis of each leg frame, global Y-axis) to be zero (i.e., legs
+            
+			double legsSep = _tool.get_legs_separation();
+			f += _tool.get_legs_separation_weight() * pow(frontLegs + backLegs - legsSep,2);
+
+			// TODO want the dot(X-axis of each leg frame, global Y-axis) to be zero (i.e., legs
 			// straight down)
 			f += _tool.get_legs_prepared_for_landing_weight() * (
                 pow(frontLegs, 2) + relw * pow(frontLegsRate, 2) + relw * pow(frontLegsAccel, 2));
