@@ -58,7 +58,8 @@ int main(int argc, char * argv[])
 
         Optimizer opt(sys, algorithm);
         // TODO choose tolerance better.
-        opt.setConvergenceTolerance(0.01);
+        opt.setConvergenceTolerance(0.001);
+		opt.setDiagnosticsLevel(3);
         opt.useNumericalGradient(true);
         opt.setMaxIterations(100000);
         opt.setLimitedMemoryHistory(500);

@@ -20,7 +20,7 @@ int main(int argc, char * argv[])
     tool.set_model_filename("feliscatus_*FILL THIS IN*.osim");
     tool.set_duration(1.0);
     tool.set_optimizer_algorithm("BestAvailable");
-    tool.set_num_optim_spline_points(10);
+    tool.set_num_optim_spline_points(20);
     tool.set_anterior_legs_down_weight(1.0);
     tool.set_posterior_legs_down_weight(1.0);
 	tool.set_hunch_value(Pi/4);
@@ -30,6 +30,8 @@ int main(int argc, char * argv[])
 	tool.set_wag_weight(1.0);
 	tool.set_yaw_value(0.0);
 	tool.set_yaw_weight(1.0);
+	tool.set_legs_separation(Pi/2);
+	tool.set_legs_separation_weight(1.0);
     tool.set_legs_prepared_for_landing_weight(1.0);
 	tool.set_use_coordinate_limit_forces(true);
     tool.set_relative_velaccel_weight(0.1);
