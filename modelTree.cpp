@@ -17,18 +17,23 @@ class FelisCatusModel : public FelisCatusModeling
 {
 public:
 
-	enum LegsType {None, Rigid, RetractBack, Retract};
+	enum LegsType {NoLegs, Rigid, RetractBack, Retract};
+
+    enum TailType {NoTail, FixedPerch, FreePerch};
 
     // member functions to allow for stepwise model creation
 	// NOTE: each 'add' function takes care of actuators if necessary
 	FelisCatusModel(string modelName, string fileName,
-		bool canTwist, bool canHunch, bool canWag, LegsType whichLegs);
+		bool canTwist, bool canHunch, bool canWag,
+        LegsType whichLegs, TailType whichTail);
 	void createBaseCase();
     void addTwist();
 	void addHunch();
 	void addWag();
 	void addRigidLegs();
 	void addRetractLegs(bool frontLegsRetract=true);
+    void addTail(TailType whichTail);
+    void addCoordinateActuator(string coordinateName);
 
 private:
 
@@ -45,13 +50,16 @@ int main(int argc, char *argv[])
     vector<bool> canHunch = bothOptions;
     vector<bool> canWag = bothOptions;
 
-    vector<string> twistStrings;
-
     vector<FelisCatusModel::LegsType> whichLegs;
-    whichLegs.push_back(FelisCatusModel::None);
+    whichLegs.push_back(FelisCatusModel::NoLegs);
     whichLegs.push_back(FelisCatusModel::Rigid);
     whichLegs.push_back(FelisCatusModel::RetractBack);
     whichLegs.push_back(FelisCatusModel::Retract);
+
+    vector<FelisCatusModel::TailType> whichTail;
+    whichTail.push_back(FelisCatusModel::NoTail);
+    whichTail.push_back(FelisCatusModel::FixedPerch);
+    whichTail.push_back(FelisCatusModel::FreePerch);
 
     for (unsigned int it = 0; it < canTwist.size(); it++)
     {
@@ -61,24 +69,34 @@ int main(int argc, char *argv[])
             {
                 for (int iL = 0; iL < whichLegs.size(); iL++)
                 {
-                    string modifier = "_";
-                    modifier += canTwist[it] ? "Twist" : "";
-                    modifier += canHunch[ih] ? "Hunch" : "";
-                    modifier += canWag[iw] ? "Wag" : "";
-
-                    switch (whichLegs[iL])
+                    for (int iT = 0; iT < whichLegs.size(); iT++)
                     {
-                        case FelisCatusModel::Rigid:
-                            modifier += "RigidLegs"; break;
-                        case FelisCatusModel::RetractBack:
-                            modifier += "RetractBackLeg"; break;
-                        case FelisCatusModel::Retract:
-                            modifier += "RetractLegs"; break;
+                        string modifier = "_";
+                        modifier += canTwist[it] ? "Twist" : "";
+                        modifier += canHunch[ih] ? "Hunch" : "";
+                        modifier += canWag[iw] ? "Wag" : "";
+
+                        switch (whichLegs[iL])
+                        {
+                            case FelisCatusModel::Rigid:
+                                modifier += "RigidLegs"; break;
+                            case FelisCatusModel::RetractBack:
+                                modifier += "RetractBackLeg"; break;
+                            case FelisCatusModel::Retract:
+                                modifier += "RetractLegs"; break;
+                        }
+                        switch (whichTail[iT])
+                        {
+                            case FelisCatusModel::FixedPerch:
+                                modifier += "FixedPerchTail"; break;
+                            case FelisCatusModel::FreePerch:
+                                modifier += "FreePerchTail"; break;
+                        }
+                        FelisCatusModel("Leland" + modifier,
+                                "feliscatus" + modifier + ".osim",
+                                canTwist[it], canHunch[ih], canWag[iw],
+                                whichLegs[iL], whichTail[iT]);
                     }
-                    FelisCatusModel("Leland" + modifier,
-                            "feliscatus" + modifier + ".osim",
-                            canTwist[it], canHunch[ih], canWag[iw],
-                            whichLegs[iL]);
                 }
             }
         }
@@ -88,13 +106,14 @@ int main(int argc, char *argv[])
 };
 
 FelisCatusModel::FelisCatusModel(string modelName, string fileName,
-		bool canTwist, bool canHunch, bool canWag, LegsType whichLegs)
+        bool canTwist, bool canHunch, bool canWag,
+        LegsType whichLegs, TailType whichTail)
 {
 	makeModel(modelName, fileName);
-	
-	createBaseCase();
-	
-	if (canTwist) {
+
+    createBaseCase();
+
+    if (canTwist) {
 		addTwist();
 	}
 
@@ -113,6 +132,10 @@ FelisCatusModel::FelisCatusModel(string modelName, string fileName,
 	} else if (whichLegs == Retract) {
 		addRetractLegs();
 	}
+
+    if (whichTail != NoTail) {
+        addTail(whichTail);
+    }
 
 	cat.print(fileName);
 }
@@ -375,4 +398,87 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
     backLegsAct->setMinControl(-maxTorque);
     backLegsAct->setMaxControl(maxTorque);
     cat.addForce(backLegsAct);
+}
+
+void FelisCatusModel::addTail(TailType whichTail)
+{
+    // For now, only considering Two-DOF tail: one that can 'pitch', then can
+    // rotate in a cone with that pitch.
+
+    // Connecting posterior and tail bodies via a custom joint.
+	// Rotation is defined via XZ Euler angles:
+    // shake is rotation of the tail about a cone whose half-angle (?) is
+    // perch.
+    double tailMassFactor = 0.5;
+    double tailSizeFactor = 1.2;
+
+    Body * tailBody = new Body();
+    tailBody->setName("tailBody");
+    tailBody->setMass(tailMassFactor * segmentalMass);
+    tailBody->setMassCenter(Vec3(tailSizeFactor * segmentalLength, 0, 0));
+    tailBody->setInertia(zeroInertia);
+
+    Vec3 locPTInPosterior(segmentalLength, 0, 0);
+    Vec3 orientPTInPosterior(0);
+    Vec3 locPTInTail(0);
+    Vec3 orientPTInTail(0);
+
+	SpatialTransform posteriorTailST;
+	posteriorTailST.updTransformAxis(0).setCoordinateNames(
+            Array<string>("shake", 1));
+    posteriorTailST.updTransformAxis(0).setAxis(Vec3(1, 0, 0));
+    posteriorTailST.updTransformAxis(1).setCoordinateNames(
+            Array<string>("perch", 1));
+    posteriorTailST.updTransformAxis(1).setAxis(Vec3(0, 0, 1));
+    // Unused, but was causing 'colinear axies' error (default was 0 0 1).
+    posteriorTailST.updTransformAxis(2).setAxis(Vec3(0, 1, 0));
+
+    CustomJoint * posteriorTail = new CustomJoint("posterior_tail",
+            *posteriorBody, locPTInPosterior, orientPTInPosterior,
+            *tailBody, locPTInTail, orientPTInTail,
+			posteriorTailST);
+
+    CoordinateSet & posteriorTailCS = posteriorTail->upd_CoordinateSet();
+    // shake
+    double posteriorTailCS0range[2] = {-2.0 * Pi, 2.0 * Pi};
+    posteriorTailCS[0].setRange(posteriorTailCS0range);
+    posteriorTailCS[0].setDefaultValue(0);
+    posteriorTailCS[0].setDefaultLocked(false);
+    // perch
+    double posteriorTailCS1range[2] = {0, 0.5 * Pi};
+    posteriorTailCS[1].setRange(posteriorTailCS1range);
+    posteriorTailCS[1].setDefaultValue(0.25 * Pi);
+    if (whichTail == FixedPerch)
+        posteriorTailCS[1].setDefaultLocked(true);
+    else if (whichTail == FreePerch)
+        posteriorTailCS[1].setDefaultLocked(false);
+
+    // Display.
+    DisplayGeometry * tailBodyDisplay = new DisplayGeometry("sphere.vtp");
+    tailBodyDisplay->setOpacity(0.5);
+    //tailBodyDisplay->setColor(Vec3(0.3, 0.3, 0.3));
+    tailBodyDisplay->setTransform(Transform(Vec3(0.5 * tailSizeFactor * segmentalLength, 0, 0)));
+    tailBodyDisplay->setScaleFactors(
+            Vec3(tailSizeFactor * segmentalLength,
+                0.1 * tailSizeFactor * segmentalLength,
+                0.1 * tailSizeFactor * segmentalLength));
+    tailBody->updDisplayer()->updGeometrySet().adoptAndAppend(tailBodyDisplay);
+    tailBody->updDisplayer()->setShowAxes(true);
+
+    cat.addBody(tailBody);
+
+    // Actuation.
+    addCoordinateActuator("shake");
+
+    if (whichTail == FreePerch)
+        addCoordinateActuator("perch");
+}
+
+void FelisCatusModel::addCoordinateActuator(string coordinateName)
+{
+    CoordinateActuator * act = new CoordinateActuator(coordinateName);
+    act->setName(coordinateName + "_actuator");
+    act->setMinControl(-maxTorque);
+    act->setMaxControl(maxTorque);
+    cat.addForce(act);
 }
