@@ -233,7 +233,7 @@ public:
         _name = _tool.get_results_directory();
         _cat = Model(_tool.get_model_filename());
 
-        if (_tool.heavy_point_mass_legs())
+        if (_tool.get_heavy_point_mass_legs())
         {
             _cat.updBodySet().get("anteriorLegs").setMass(_cat.getBodySet().get("anteriorBody").getMass());
             _cat.updBodySet().get("posteriorLegs").setMass(_cat.getBodySet().get("posteriorBody").getMass());
