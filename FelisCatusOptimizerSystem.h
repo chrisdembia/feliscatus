@@ -237,8 +237,8 @@ public:
         {
             _cat.updBodySet().get("anteriorLegs").setMass(_cat.getBodySet().get("anteriorBody").getMass());
             _cat.updBodySet().get("posteriorLegs").setMass(_cat.getBodySet().get("posteriorBody").getMass());
-            _cat.updBodySet().get("anteriorLegs").setInertia(OpenSim::Inertia(0, 0, 0));
-            _cat.updBodySet().get("posteriorLegs").setInertia(OpenSim::Inertia(0, 0, 0));
+            _cat.updBodySet().get("anteriorLegs").setInertia(SimTK::Inertia(0, 0, 0));
+            _cat.updBodySet().get("posteriorLegs").setInertia(SimTK::Inertia(0, 0, 0));
         }
 
         _numOptimSplinePoints = _tool.get_num_optim_spline_points();
