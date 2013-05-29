@@ -337,6 +337,7 @@ public:
     ~FelisCatusOptimizerSystem()
     {
         _optLog.close();
+        _objLog.close();
     }
 
     int objectiveFunc(const Vector & parameters,
