@@ -139,6 +139,10 @@ public:
         desired_posterior_feet_pos_from_pivot_point_in_ground, Vec3,
             "Only relevant if using nonzero taskspace_posterior_legs_down_weight."); 
 
+    OpenSim_DECLARE_OPTIONAL_PROPERTY(heavy_point_mass_legs, bool,
+            "Legs have same mass as the body to which it's attached; legs "
+            "have zero inertia. Overrides whatever is in the model.");
+
     OpenSim_DECLARE_OPTIONAL_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
             "optimization parameters. If not provided, initial parameters are "
@@ -196,6 +200,8 @@ public:
         constructProperty_desired_anterior_feet_pos_from_pivot_point_in_ground(Vec3(-1, -1, 0));
         constructProperty_desired_posterior_feet_pos_from_pivot_point_in_ground(Vec3(1, -1, 0));
 
+        constructProperty_heavy_point_mass_legs(false);
+
         constructProperty_initial_parameters_filename("");
     }
 
@@ -226,6 +232,15 @@ public:
         // Parse inputs.
         _name = _tool.get_results_directory();
         _cat = Model(_tool.get_model_filename());
+
+        if (_tool.heavy_point_mass_legs())
+        {
+            _cat.updBodySet().get("anteriorLegs").setMass(_cat.getBodySet().get("anteriorBody").getMass());
+            _cat.updBodySet().get("posteriorLegs").setMass(_cat.getBodySet().get("posteriorBody").getMass());
+            _cat.updBodySet().get("anteriorLegs").setInertia(OpenSim::Inertia(0, 0, 0));
+            _cat.updBodySet().get("posteriorLegs").setInertia(OpenSim::Inertia(0, 0, 0));
+        }
+
         _numOptimSplinePoints = _tool.get_num_optim_spline_points();
 
         // Create a directory for all the output files we'll create.

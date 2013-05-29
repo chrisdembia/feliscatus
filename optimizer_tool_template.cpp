@@ -41,6 +41,8 @@ int main(int argc, char * argv[])
     tool.set_taskspace_posterior_legs_down_weight(0.0);
     tool.set_desired_anterior_feet_pos_from_pivot_point_in_ground(Vec3(-1, -1, 0));
     tool.set_desired_posterior_feet_pos_from_pivot_point_in_ground(Vec3(1, -1, 0));
+    
+    tool.set_heavy_point_mass_legs(false);
 
     tool.set_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
     tool.print(filename);
