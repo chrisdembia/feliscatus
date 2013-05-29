@@ -40,6 +40,7 @@ using SimTK::Real;
 using SimTK::Stage;
 using SimTK::State;
 using SimTK::Vector;
+using SimTK::Vec3;
 
 namespace OpenSim
 {
@@ -120,6 +121,24 @@ public:
             "Weighting on penalty for twist being below -Pi/2 or above 3Pi/2 "
             "at any point in the simulation");
 
+    OpenSim_DECLARE_PROPERTY(taskspace_anterior_legs_down_weight, double,
+            "Weighting on deviation (as a squared vector magnitude) from "
+            "desired_anterior_feet_pos_from_pivot_point_in_ground. This task-space "
+            "objective would be used instead of anterior_legs_down.");
+    OpenSim_DECLARE_PROPERTY(taskspace_posterior_legs_down_weight, double,
+            "Weighting on deviation (as a squared vector magnitude) from "
+            "desired_posterior_feet_pos_from_pivot_point_in_ground. This task-space "
+            "objective would be used instead of anterior_legs_down and "
+            "posterior_legs_down.");
+
+    OpenSim_DECLARE_OPTIONAL_PROPERTY(
+        desired_anterior_feet_pos_from_pivot_point_in_ground, Vec3,
+            "Only relevant if using nonzero taskspace_anterior_legs_down_weight."); 
+
+    OpenSim_DECLARE_OPTIONAL_PROPERTY(
+        desired_posterior_feet_pos_from_pivot_point_in_ground, Vec3,
+            "Only relevant if using nonzero taskspace_posterior_legs_down_weight."); 
+
     OpenSim_DECLARE_OPTIONAL_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
             "optimization parameters. If not provided, initial parameters are "
@@ -171,6 +190,12 @@ public:
 		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_relative_velaccel_weight(1.0);
         constructProperty_large_twist_penalty_weight(0.0);
+
+        constructProperty_taskspace_anterior_legs_down_weight(0.0);
+        constructProperty_taskspace_posterior_legs_down_weight(0.0);
+        constructProperty_desired_anterior_feet_pos_from_pivot_point_in_ground(Vec3(-1, -1, 0));
+        constructProperty_desired_posterior_feet_pos_from_pivot_point_in_ground(Vec3(1, -1, 0));
+
         constructProperty_initial_parameters_filename("");
     }
 
@@ -194,7 +219,9 @@ public:
     FelisCatusOptimizerSystem(OpenSim::FelisCatusOptimizerTool & tool) :
         _tool(tool),
         _objectiveCalls(0),
-        _objectiveFcnValueBestYet(SimTK::Infinity)
+        _objectiveFcnValueBestYet(SimTK::Infinity),
+        _anteriorFeetPosFromPivotPointInAnterior(Vec3(-1, 1, 0)),
+        _posteriorFeetPosFromPivotPointInPosterior(Vec3(1, 1, 0))
     {
         // Parse inputs.
         _name = _tool.get_results_directory();
@@ -281,6 +308,7 @@ public:
             }
         }
         _optLog << endl;
+        
     }
 
     /**
@@ -398,7 +426,6 @@ public:
 
         // Construct a manager to run the integration.
         Manager manager(_cat, integrator);
-
         // TODO don't know why.
         _cat.getMultibodySystem().realize(initState, Stage::Acceleration);
 
@@ -411,7 +438,7 @@ public:
         // --------------------------------------------------------------------
 
         // --- Construct the objective function, term by term.
-        // Will be writing to a lg.
+        // Will be writing to a log.
         if (_objectiveCalls % _objLogPeriod == 0)
             _objLog << _objectiveCalls << " ";
         // Create a copy of the init state; we need a state consistent with model.
@@ -439,6 +466,8 @@ public:
 		double yaw = coordinates.get("yaw").getValue(aState);
 		double yawRate = coordinates.get("yaw").getSpeedValue(aState);
         double yawAccel = coordinates.get("yaw").getAccelerationValue(aState);
+
+        // Relative weighting of velocity/acceleration terms.
         double relw = _tool.get_relative_velaccel_weight();
         // ====================================================================
         f = 0;
@@ -510,6 +539,71 @@ public:
                 _objLog << " legs_prepared_for_landing " << termA + termB;
             f += termA + termB;
         }
+        if (_tool.get_taskspace_anterior_legs_down_weight() != 0.0 ||
+            _tool.get_taskspace_posterior_legs_down_weight() != 0.0)
+        { // Task-space flip conditions.
+
+            // Construct the position of the pivot point.
+            double tx = coordinates.get("tx").getValue(aState);
+            double ty = coordinates.get("ty").getValue(aState);
+            double tz = coordinates.get("tz").getValue(aState);
+            Vec3 pivotPointPosFromGroundPointInGround(tx, ty, tz);
+            
+            if (_tool.get_taskspace_anterior_legs_down_weight() != 0)
+            {
+                // All vectors instantiated in this scope are expressed
+                // in ground frame.
+                Vec3 anteriorFeetPosFromGroundPointInGround;
+                _cat.getSimbodyEngine().transformPosition(aState, 
+                    _cat.getBodySet().get("anteriorBody"),
+                    _anteriorFeetPosFromPivotPointInAnterior,
+                    _cat.getGroundBody(),
+                    anteriorFeetPosFromGroundPointInGround);
+
+                Vec3 anteriorFeetPosFromPivotPointInGround = 
+                    anteriorFeetPosFromGroundPointInGround -
+                    pivotPointPosFromGroundPointInGround;
+
+                Vec3 diff = anteriorFeetPosFromPivotPointInGround -
+                    _tool.get_desired_anterior_feet_pos_from_pivot_point_in_ground();
+
+                // magnitude(diff)^2
+                double term = _tool.get_taskspace_anterior_legs_down_weight() * (
+                    SimTK::dot(diff, diff));
+                if (_objectiveCalls % _objLogPeriod == 0)
+                    _objLog << " taskspace_anterior_legs_down " << term;
+                f += term;
+            }
+
+            if (_tool.get_taskspace_posterior_legs_down_weight() != 0.0)
+            {
+                // All vectors instantiated in this scope are expressed
+                // in ground frame.
+                Vec3 posteriorFeetPosFromGroundPointInGround;
+                _cat.getSimbodyEngine().transformPosition(aState,
+                    _cat.getBodySet().get("posteriorBody"),
+                    _posteriorFeetPosFromPivotPointInPosterior,
+                    _cat.getGroundBody(),
+                    posteriorFeetPosFromGroundPointInGround);
+
+                Vec3 posteriorFeetPosFromPivotPointInGround =
+                    posteriorFeetPosFromGroundPointInGround -
+                    pivotPointPosFromGroundPointInGround;
+
+                Vec3 diff = posteriorFeetPosFromPivotPointInGround -
+                    _tool.get_desired_posterior_feet_pos_from_pivot_point_in_ground();
+
+                // magnitude(diff)^2
+                double term = _tool.get_taskspace_posterior_legs_down_weight() * (
+                    SimTK::dot(diff, diff));
+                if (_objectiveCalls % _objLogPeriod == 0)
+                    _objLog << " taskspace_posterior_legs_down " << term;
+                f += term;
+
+            }
+        }
+
+        
 
         // Conditions that do not just depend on final state.
         // NOTE: MUST ADD ALL NEED-STATE-STORAGE conditions to this boolean.
@@ -572,7 +666,7 @@ public:
         // If we just got worse, print out the best-yet splines and
         // current model. Note: current model is NOT "best yet", but the
         // idea is that it'll be close.
-        if (_lastCallWasBestYet && ~_thisCallIsBestYet)
+        if (_lastCallWasBestYet && !_thisCallIsBestYet)
         {
             // TODO pass in 'true' for nondimensionalize.
             printBestYetPrescribedControllerFunctionSet(
@@ -714,6 +808,10 @@ private:
     // To aid with conservative printing of best yet actuation.
     mutable bool _lastCallWasBestYet;
     mutable bool _thisCallIsBestYet;
+
+    // For task-space objectives.
+    Vec3 _anteriorFeetPosFromPivotPointInAnterior;
+    Vec3 _posteriorFeetPosFromPivotPointInPosterior;
 
 };
 
