@@ -272,7 +272,7 @@ void FelisCatusModel::addTwist()
 
 	// Set twist limit force.
 	CoordinateLimitForce * twistLimitForce = 
-		new CoordinateLimitForce("twist", 80, 1.0E6, -80, 1.0E6, 1.0E5, 5.0, false);
+		new CoordinateLimitForce("twist", 80, 1.0E2, -80, 1.0E2, 1.0E1, 5.0, false);
 	cat.addForce(twistLimitForce);
 }
 
@@ -292,7 +292,7 @@ void FelisCatusModel::addHunch()
 
 	// Set hunch limit force
 	CoordinateLimitForce * hunchLimitForce = 
-		new CoordinateLimitForce("hunch", 90, 1.0E6, -20, 1.0E6, 1.0E5, 5.0, false);
+		new CoordinateLimitForce("hunch", 90, 1.0E2, -20, 1.0E2, 1.0E1, 2.0, false);
 	cat.addForce(hunchLimitForce);
 }
 
@@ -310,7 +310,7 @@ void FelisCatusModel::addWag()
 
 	// Set wag limit force.
 	CoordinateLimitForce * wagLimitForce = 
-		new CoordinateLimitForce("wag", 45, 1.0E6, -45, 1.0E6, 1.0E5, 5.0, false);
+		new CoordinateLimitForce("wag", 45, 1.0E2, -45, 1.0E2, 1.0E1, 2.0, false);
 	cat.addForce(wagLimitForce);
 }
 
@@ -383,7 +383,7 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
 	cat.addBody(anteriorLegs);
 	cat.addBody(posteriorLegs);
 
-	// Adding leg actuators.
+	// Adding leg actuators and limit forces.
     if (frontLegsRetract)
     {
         CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
@@ -391,6 +391,10 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
         frontLegsAct->setMinControl(-maxTorque);
         frontLegsAct->setMaxControl(maxTorque);
         cat.addForce(frontLegsAct);
+
+		CoordinateLimitForce * frontLegsLimitForce = 
+			new CoordinateLimitForce("frontLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
+		cat.addForce(frontLegsLimitForce);
     }
     
 	CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
@@ -398,6 +402,10 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
     backLegsAct->setMinControl(-maxTorque);
     backLegsAct->setMaxControl(maxTorque);
     cat.addForce(backLegsAct);
+
+	CoordinateLimitForce * backLegsLimitForce = 
+		new CoordinateLimitForce("backLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
+	cat.addForce(backLegsLimitForce);
 }
 
 void FelisCatusModel::addTail(TailType whichTail)

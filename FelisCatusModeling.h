@@ -56,7 +56,7 @@ public:
         // Create the model.
         cat = Model();
         cat.setName(modelName);
-        cat.setGravity(Vec3(0, -9.81, 0));
+        cat.setGravity(Vec3(0, 0, 0));
 
         // Constants/parameters.
         segmentalLength = 0.175;		 // m
