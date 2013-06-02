@@ -1,6 +1,11 @@
 
 #include "FelisCatusModeling.h"
 
+using OpenSim::CustomJoint;
+using OpenSim::PinJoint;
+using OpenSim::SpatialTransform;
+using OpenSim::WeldJoint;
+
 /**
  * This class allows for the creation of a "tree" of cat models, starting with
  * a "zero- degree-of-freedom" (DOF) base case and adding complexity (i.e.,
@@ -35,11 +40,16 @@ public:
 	void addRigidLegs();
 	void addRetractLegs(bool frontLegsRetract=true);
     void addTail(TailType whichTail);
+
+    /**
+     * Adds a coordinate actuator to the model for the given coordinate name.
+     * The min and max control are set from the _maxTorque member variable.
+     * */
     void addCoordinateActuator(string coordinateName);
 
 private:
 
-	static const int maxTorque = 20; // N-m
+	static const int _maxTorque = 20; // N-m
 };
 
 int main(int argc, char *argv[])
@@ -271,11 +281,7 @@ void FelisCatusDembiaSketch::addTwist()
 	cat.updCoordinateSet().get("twist").setDefaultLocked(false);
 	
 	// Add twist actuator.
-	CoordinateActuator * twistAct = new CoordinateActuator("twist");
-    twistAct->setName("twist_actuator");
-	twistAct->setMinControl(-maxTorque);
-    twistAct->setMaxControl(maxTorque);
-	cat.addForce(twistAct);
+    addCoordinateActuator("twist");
 
 	// Set twist limit force.
 	CoordinateLimitForce * twistLimitForce = 
@@ -291,11 +297,7 @@ void FelisCatusDembiaSketch::addHunch()
 	cat.updCoordinateSet().get("pitch").setDefaultValue(convertDegreesToRadians(-15));
 	
 	// Add hunch actuator.
-	CoordinateActuator * hunchAct = new CoordinateActuator("hunch");
-	hunchAct->setName("hunch_actuator");
-	hunchAct->setMinControl(-maxTorque);
-    hunchAct->setMaxControl(maxTorque);
-	cat.addForce(hunchAct);
+    addCoordinateActuator("hunch");
 
 	// Set hunch limit force
 	CoordinateLimitForce * hunchLimitForce = 
@@ -309,11 +311,7 @@ void FelisCatusDembiaSketch::addWag()
 	cat.updCoordinateSet().get("wag").setDefaultLocked(false);
 	
 	// Add wag actuator.
-	CoordinateActuator * wagAct = new CoordinateActuator("wag");
-	wagAct->setName("wag_actuator");
-	wagAct->setMinControl(-maxTorque);
-    wagAct->setMaxControl(maxTorque);
-	cat.addForce(wagAct);
+    addCoordinateActuator("wag");
 
 	// Set wag limit force.
 	CoordinateLimitForce * wagLimitForce = 
@@ -393,22 +391,14 @@ void FelisCatusDembiaSketch::addRetractLegs(bool frontLegsRetract)
 	// Adding leg actuators and limit forces.
     if (frontLegsRetract)
     {
-        CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
-        frontLegsAct->setName("frontLegs_actuator");
-        frontLegsAct->setMinControl(-maxTorque);
-        frontLegsAct->setMaxControl(maxTorque);
-        cat.addForce(frontLegsAct);
+        addCoordinateActuator("frontLegs");
 
 		CoordinateLimitForce * frontLegsLimitForce = 
 			new CoordinateLimitForce("frontLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
 		cat.addForce(frontLegsLimitForce);
     }
     
-	CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
-    backLegsAct->setName("backLegs_actuator");
-    backLegsAct->setMinControl(-maxTorque);
-    backLegsAct->setMaxControl(maxTorque);
-    cat.addForce(backLegsAct);
+    addCoordinateActuator("backLegs");
 
 	CoordinateLimitForce * backLegsLimitForce = 
 		new CoordinateLimitForce("backLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
@@ -471,7 +461,6 @@ void FelisCatusDembiaSketch::addTail(TailType whichTail)
     // Display.
     DisplayGeometry * tailBodyDisplay = new DisplayGeometry("sphere.vtp");
     tailBodyDisplay->setOpacity(0.5);
-    //tailBodyDisplay->setColor(Vec3(0.3, 0.3, 0.3));
     tailBodyDisplay->setTransform(Transform(Vec3(0.5 * tailSizeFactor * segmentalLength, 0, 0)));
     tailBodyDisplay->setScaleFactors(
             Vec3(tailSizeFactor * segmentalLength,
@@ -493,7 +482,7 @@ void FelisCatusDembiaSketch::addCoordinateActuator(string coordinateName)
 {
     CoordinateActuator * act = new CoordinateActuator(coordinateName);
     act->setName(coordinateName + "_actuator");
-    act->setMinControl(-maxTorque);
-    act->setMaxControl(maxTorque);
+    act->setMinControl(-_maxTorque);
+    act->setMaxControl(_maxTorque);
     cat.addForce(act);
 }
