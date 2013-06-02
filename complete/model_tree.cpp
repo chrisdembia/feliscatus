@@ -1,6 +1,8 @@
 
 #include "FelisCatusModeling.h"
 
+using OpenSim::CoordinateActuator;
+using OpenSim::CoordinateLimitForce;
 using OpenSim::CustomJoint;
 using OpenSim::PinJoint;
 using OpenSim::SpatialTransform;
@@ -435,7 +437,7 @@ void FelisCatusDembiaSketch::addTail(TailType whichTail)
     posteriorTailST.updTransformAxis(1).setCoordinateNames(
             Array<string>("perch", 1));
     posteriorTailST.updTransformAxis(1).setAxis(Vec3(0, 0, 1));
-    // Unused, but was causing 'colinear axies' error (default was 0 0 1).
+    // Unused, but was causing 'colinear axies' error (default was 0 0 1):
     posteriorTailST.updTransformAxis(2).setAxis(Vec3(0, 1, 0));
 
     CustomJoint * posteriorTail = new CustomJoint("posterior_tail",

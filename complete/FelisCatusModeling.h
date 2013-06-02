@@ -12,19 +12,10 @@ using std::vector;
 
 using OpenSim::Array;
 using OpenSim::Body;
-using OpenSim::CoordinateCouplerConstraint;
 using OpenSim::Coordinate;
 using OpenSim::CoordinateSet;
 using OpenSim::DisplayGeometry;
-using OpenSim::LinearFunction;
-using OpenSim::PinJoint;
-using OpenSim::BallJoint;
-using OpenSim::WeldJoint;
-using OpenSim::CustomJoint;
 using OpenSim::Model;
-using OpenSim::SpatialTransform;
-using OpenSim::CoordinateActuator;
-using OpenSim::CoordinateLimitForce;
 
 using SimTK::Inertia;
 using SimTK::Pi;
@@ -63,17 +54,20 @@ public:
         segmentalMass = 1;				 // kg
 		legsLength = 0.125;				 // m
 		legsDiam = 0.1 * legsLength;	 // m
-		legsWidth = 0.6 * segmentalDiam; // m; sum of both legs (60% distance across the belly)
+        // Sum of both legs (60% distance across the belly):
+		legsWidth = 0.6 * segmentalDiam; // m
 		legsMass = 0.2;					 // kg
-        I = 1; // kg-m^2; transverse moment of inertia
+        // Transverse central moment of inertia:
+        I = 1;                           // kg-m^2
         JIratio = 0.25; // from Kane and Scher (1969)
-        double J = JIratio * I; // axial moment of inertia
-        double Ixx = J; // + mass*(bodyLength/2.0)*(bodyLength/2.0); // kg-m^2, shifted because of displaced joint TODO might be unneccessary? I is about COM.
-        double Iyy = I; // kg-m^2
-        double Izz = I; // kg-m^2
-        double Ixy = 0; // kg-m^2
-        double Ixz = 0; // kg-m^2
-        double Iyz = 0; // kg-m^2
+        // Axial moment of inertia:
+        double J = JIratio * I;
+        double Ixx = J;
+        double Iyy = I;
+        double Izz = I;
+        double Ixy = 0;
+        double Ixz = 0;
+        double Iyz = 0;
         segmentalInertia = Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
 		legsInertia = (legsMass/segmentalMass) * segmentalInertia;
         zeroInertia = Inertia(0, 0, 0, 0, 0, 0);

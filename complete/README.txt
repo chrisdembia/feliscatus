@@ -14,7 +14,10 @@ that creates a model should #include this file.
 
 model_tree.cpp
 --------------
-Defines a class that extends the FelisCatusModeling class
+Defines a class that extends the FelisCatusModeling class to optionally add a
+variety of degrees of freedom, defined by Dembia and Sketch. This executable
+actually generates many model files, not just one. All the models are fairly
+distinct from the one described by Kane and Scher, 1969.
 
 model_kanescherfig2.cpp [footnote 1]
 ------------------------------------

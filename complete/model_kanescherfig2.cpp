@@ -1,8 +1,14 @@
 
 #include "FelisCatusModeling.h"
 
-using SimTK::convertDegreesToRadians;
+using OpenSim::CoordinateCouplerConstraint;
+using OpenSim::CustomJoint;
+using OpenSim::LinearFunction;
+using OpenSim::PinJoint;
 using OpenSim::PointToPointSpring;
+using OpenSim::SpatialTransform;
+
+using SimTK::convertDegreesToRadians;
 
 /**
  * This model allows for the "salient features of motion" of a falling cat

@@ -1,6 +1,9 @@
 
 #include "FelisCatusModeling.h"
 
+using OpenSim::CoordinateCouplerConstraint;
+using OpenSim::LinearFunction;
+using OpenSim::PinJoint;
 using OpenSim::PointToPointSpring;
 
 /**

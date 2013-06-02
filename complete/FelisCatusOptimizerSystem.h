@@ -25,6 +25,7 @@ using std::string;
 using std::vector;
 
 using OpenSim::Array;
+using OpenSim::CoordinateLimitForce;
 using OpenSim::CoordinateSet;
 using OpenSim::FunctionSet;
 using OpenSim::Manager;
