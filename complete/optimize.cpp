@@ -3,7 +3,6 @@
 
 #include <OpenSim/OpenSim.h>
 
-#include <FelisCatusModeling.h>
 #include <FelisCatusOptimizerSystem.h>
 
 using std::cout;

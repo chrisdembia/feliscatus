@@ -4,7 +4,7 @@
 
 #include <math.h>
 #include <stdio.h>
-// For mkdir platform dependence:
+// For platform dependence of making a new directory:
 #if defined(_WIN32)
 #include <direct.h>
 #else
@@ -15,8 +15,6 @@
 #include <fstream>
 
 #include <OpenSim/OpenSim.h>
-
-#include "FelisCatusModeling.h"
 
 using std::cout;
 using std::endl;
@@ -46,15 +44,15 @@ using SimTK::Vec3;
 namespace OpenSim
 {
 
-// TODO we assume that minControl is negative.
-
 /**
  * Manages inputs to an optimization of cat-flipping via OpenSim's
- * serialization/XML abilities. This is NOT an AbstractTool.
+ * serialization/XML abilities. This is NOT an OpenSim::AbstractTool.
  * */
 class FelisCatusOptimizerTool : public Object {
 OpenSim_DECLARE_CONCRETE_OBJECT(FelisCatusOptimizerTool, Object);
 public:
+
+    // General properties.
     OpenSim_DECLARE_PROPERTY(results_directory, string,
             "Directory in which to save optimization log and results");
     OpenSim_DECLARE_PROPERTY(model_filename, string,
@@ -70,6 +68,7 @@ public:
             "provided, the functions specified in that file must have the "
             "correct number of points. We do not error-check for this.");
 
+    // Properties related to the objective function.
     OpenSim_DECLARE_PROPERTY(anterior_legs_down_weight, double,
             "Adds terms to the objective to minimize final value of "
             "(roll - Pi) and related speeds");
@@ -126,19 +125,19 @@ public:
             "desired_posterior_feet_pos_from_pivot_point_in_ground. This task-space "
             "objective would be used instead of anterior_legs_down and "
             "posterior_legs_down.");
-
     OpenSim_DECLARE_OPTIONAL_PROPERTY(
         desired_anterior_feet_pos_from_pivot_point_in_ground, Vec3,
             "Only relevant if using nonzero taskspace_anterior_legs_down_weight."); 
-
     OpenSim_DECLARE_OPTIONAL_PROPERTY(
         desired_posterior_feet_pos_from_pivot_point_in_ground, Vec3,
             "Only relevant if using nonzero taskspace_posterior_legs_down_weight."); 
 
+    // Modifying the model before optimizing.
     OpenSim_DECLARE_OPTIONAL_PROPERTY(heavy_point_mass_legs, bool,
             "Legs have same mass as the body to which it's attached; legs "
             "have zero inertia. Overrides whatever is in the model.");
 
+    // Setting initial parameters for the optimization.
     OpenSim_DECLARE_OPTIONAL_PROPERTY(initial_parameters_filename, string,
             "File containing FunctionSet of SimmSpline's used to initialize "
             "optimization parameters. If not provided, initial parameters are "
@@ -148,9 +147,11 @@ public:
             "The time values that are actually used in the simulation are "
             "equally spaced from t = 0 to t = duration, and there should be "
 			"as many points in each function as given by the num_optim_spline_points "
-            "property. y values should be nondimensional and between -1 and 1. "
-            "NOTE the output optimized splines are NOT NONDIMENSIONAL. Be careful; "
-            "we do not do any error checking.")
+            "property. y values should be nondimensional and between -1 and 1 "
+            "(negative values normalized by minControl if minControl is "
+            "negative; otherwise. Otherwise the value is normalized by "
+            "maxControl). NOTE the output optimized splines are NOT "
+            "NONDIMENSIONAL. Be careful; " "we do not do any error checking.")
 
     FelisCatusOptimizerTool() : Object()
     {
@@ -158,11 +159,13 @@ public:
         constructProperties();
     }
 
+    /// This constructor allows for the de/serialization.
     FelisCatusOptimizerTool(const string &aFileName, bool
             aUpdateFromXMLNode=true) : Object(aFileName, aUpdateFromXMLNode)
     {
         setNull();
         constructProperties();
+        // Must be called after constructProperties():
         updateFromXMLDocument();
     }
 
@@ -206,11 +209,14 @@ public:
 }
 
 /**
- * Finds a control input/trajectory that achieves certain desired
+ * Finds a control input history that achieves certain desired
  * features of a cat's flipping maneuver. The control of the system
- * is performed via a PrescribedController that uses a spline trajectory
- * for all actuators.
- * TODO describe how the parameters are ordered.
+ * is performed via a PrescribedController that uses a spline for all
+ * actuators.
+ *
+ * Parameters are odered by actuator, then by spline point index for a given
+ * actuator. Parameters are nondimensionalized by the min or max control
+ * values for the associated actuator.
  * */
 class FelisCatusOptimizerSystem : public OptimizerSystem
 {
@@ -229,6 +235,7 @@ public:
         _name = _tool.get_results_directory();
         _cat = Model(_tool.get_model_filename());
 
+        // -- Modify leg inertial parameters?
         if (_tool.get_heavy_point_mass_legs())
         { // See description of this property above.
             _cat.updBodySet().get("anteriorLegs").setMass(_cat.getBodySet().get("anteriorBody").getMass());
@@ -236,6 +243,22 @@ public:
             _cat.updBodySet().get("anteriorLegs").setInertia(SimTK::Inertia(0, 0, 0));
             _cat.updBodySet().get("posteriorLegs").setInertia(SimTK::Inertia(0, 0, 0));
         }
+
+		// -- Disable coordinate limit forces?
+		if (!_tool.get_use_coordinate_limit_forces())
+        {
+            State& initState = _cat.initSystem();
+
+            // Loop over all forces in model.
+			for (int iFor = 0; iFor < _cat.getForceSet().getSize(); iFor++)
+			{
+				CoordinateLimitForce * LF = dynamic_cast<CoordinateLimitForce *> (&_cat.updForceSet().get(iFor));
+				if (LF)
+				{ // If it is a coordinate limit force, disable it.
+					_cat.updForceSet().get(iFor).setDisabled(initState, true);
+				}
+			}
+		}
 
         _numOptimSplinePoints = _tool.get_num_optim_spline_points();
 
@@ -246,8 +269,8 @@ public:
 			mkdir(_name.c_str(), 0777);
 		#endif
 
-        // Serialize what we just deserialized, in the results dir.
-        // To keep everything in one nice organized place.
+        // Serialize what we just deserialized, in the results dir,
+        // to keep everything in one nice organized place.
         _tool.print(_name + "/" + _name + "_setup.xml");
 
         // Create a log.
@@ -257,7 +280,7 @@ public:
         _optLog << ctime(&rawtime);
         _optLog << "Model file name: " << _tool.get_model_filename() << endl;
 
-        // Create the objective terms log.
+        // Create the log that prints out the objective function's terms.
         _objLog.open((_name + "/" + _name + "_objlog.txt").c_str(), ofstream::out);
 
         // Compute the number of optimization parameters we'll have.
@@ -278,7 +301,7 @@ public:
         // Add the PrescribedController to the model.
         _cat.addController(flipController);
 
-        // Create SimmSpline's for each actuator.
+        // - Create SimmSpline's for each actuator.
         double indexToTimeInSeconds =
             _tool.get_duration() / (double)(_numOptimSplinePoints - 1);
         for (int i = 0; i < _numActuators; i++)
@@ -307,15 +330,14 @@ public:
         setParameterLimits(lowerLimits, upperLimits);
 
         // Create a header row in the log.
-        _optLog << "objective_calls " <<
-            "objective_fcn_value " <<
+        _optLog << "objective_calls " << "objective_fcn_value " <<
             "objective_fcn_value_best_yet" << endl;
     }
 
     /**
      * With knowledge from the FelisCatusOptimizerTool, provides what should be
      * used as the initial parameters. If the tool's
-     * initial_parameters_filename is empty, then the initial parameters are
+     * initial_parameters_filename is empty, then all initial parameters are
      * set to 0.0.
      * */
     Vector initialParameters()
@@ -333,12 +355,12 @@ public:
             Array<string> initNames;
             initFcns.getNames(initNames);
 
-            // This loop is set up so that, hopefully, the initFcns set's
-            // functions do not need to be ordered in the same way as the
+            // This loop is set up so that the initFcns do not need to be
+            // ordered in the same way as the
             // optimization parameters are. Also, the number of initFcns
-			// specified by the initialization file can be greater than the
-			// number of actuators in the model (assuming that the initial-
-			// ization file AT LEAST contains the model's actuators).
+			// specified by the initial parameters file can be greater than the
+			// number of actuators in the model (assuming that the initial
+			// parameters file AT LEAST contains the model's actuators).
             for (int iAct = 0; iAct < _numActuators; iAct++)
             { // Loop through the actuators in the model.
 
@@ -354,8 +376,7 @@ public:
                     // Find the right index in the optimization parameters.
                     int paramIndex = iAct * _numOptimSplinePoints + iPts;
 
-                    // Finally, transfer y value from input to init parameters,
-					// scaled by maximum torque.
+                    // Finally, transfer y value from input to init parameters.
                     initParams[paramIndex] = fcn->getY(iPts);
                 }
             }
@@ -376,7 +397,7 @@ public:
         // Increment the number of calls to this function.
         _objectiveCalls++;
 
-        // Unpack parameters into the model: update spline points.
+        // - Unpack parameters into the model: update spline points.
         for (int iAct = 0; iAct < _numActuators; iAct++)
         {
             // Max/min for all spline points for the i-th actuator.
@@ -408,26 +429,12 @@ public:
         // --- Run a forward dynamics simulation.
         State& initState = _cat.initSystem();
 
-		// Disable coordinate limit forces?
-		if (!_tool.get_use_coordinate_limit_forces())
-        { // Loop over all forces in model.
-			for (int iFor = 0; iFor < _cat.getForceSet().getSize(); iFor++)
-			{
-				CoordinateLimitForce * LF = dynamic_cast<CoordinateLimitForce *> (&_cat.updForceSet().get(iFor));
-				if (LF)
-				{ // If it is a limit force, disable it.
-					_cat.updForceSet().get(iFor).setDisabled(initState, true);
-				}
-			}
-		}
-
         // Construct an integrator.
         SimTK::RungeKuttaMersonIntegrator integrator(_cat.getMultibodySystem());
         integrator.setAccuracy(1.0e-6);
 
         // Construct a manager to run the integration.
         Manager manager(_cat, integrator);
-        // TODO don't know why.
         _cat.getMultibodySystem().realize(initState, Stage::Acceleration);
 
         // Integrate from initial time to final time
@@ -438,11 +445,11 @@ public:
         manager.integrate(initState);
         // --------------------------------------------------------------------
 
-        // --- Construct the objective function, term by term.
-        // Will be writing to a log.
+        // --- Construct the objective function value, term by term.
+        // Will be writing to a log while constructing objective function val.
         if (_objectiveCalls % _objLogPeriod == 0)
             _objLog << _objectiveCalls << " ";
-        // Create a copy of the init state; we need a state consistent with model.
+        // Create a copy of the init state; we need a consistent state.
         State aState = initState;
         _cat.getMultibodySystem().realize(aState, Stage::Acceleration);
         const CoordinateSet& coordinates = _cat.getCoordinateSet();
@@ -530,8 +537,6 @@ public:
             double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
             double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
             
-			// TODO want the dot(X-axis of each leg frame, global Y-axis) to be zero (i.e., legs
-			// straight down)
 			double termA = _tool.get_legs_prepared_for_landing_weight() * (
                 pow(frontLegs, 2) + relw * pow(frontLegsRate, 2) + relw * pow(frontLegsAccel, 2));
             double termB = _tool.get_legs_prepared_for_landing_weight() * (
@@ -604,9 +609,7 @@ public:
             }
         }
 
-        
-
-        // Conditions that do not just depend on final state.
+        // -- Conditions that do not just depend on final state.
         // NOTE: MUST ADD ALL NEED-STATE-STORAGE conditions to this boolean.
         bool needStateStorage =
             (_tool.get_legs_separation_weight() != 0.0 || _tool.get_large_twist_penalty_weight() != 0.0);
@@ -614,11 +617,6 @@ public:
         if (needStateStorage)
         {
             Storage stateSto = manager.getStateStorage();
-
-			// LEGS SHOULD BE SEPARATED BY SPECIFIED ANGLE THROUGHOUT MOTION, NOT
-			// JUST AT FINAL TIME
-			//double legsSep = _tool.get_legs_separation();
-			//f += _tool.get_legs_separation_weight() * pow(frontLegs + backLegs - legsSep,2);
 
             if (_tool.get_large_twist_penalty_weight() != 0.0)
             {
@@ -666,15 +664,15 @@ public:
 
         // If we just got worse, print out the best-yet splines and
         // current model. Note: current model is NOT "best yet", but the
-        // idea is that it'll be close.
+        // idea is that it'll be close. Also print out nondimensionalized
+        // splines so that they can be used directly as input for a subsequent
+        // optimization.
         if (_lastCallWasBestYet && !_thisCallIsBestYet)
         {
-            // TODO pass in 'true' for nondimensionalize.
             printBestYetPrescribedControllerFunctionSet(
                     _name + "_best_yet_parameters.xml");
             printBestYetPrescribedControllerFunctionSet(
-                    _name + "_best_yet_parameters_nomdim.xml",
-                    true);
+                    _name + "_best_yet_parameters_nomdim.xml", true);
             printModel(_name + "_best_yet.osim");
         }
 
@@ -772,6 +770,9 @@ private:
     /// See constructor.
     OpenSim::FelisCatusOptimizerTool & _tool;
 
+    // 'mutable' lets us modify the member inside const member functions, such
+    // as objectiveFunc() above.
+
     /// The model containing the attributes described in this class'
     /// description.
     mutable Model _cat;
@@ -787,9 +788,6 @@ private:
 
     /// Vector of the splines that gave the best objective value yet.
     mutable vector<SimmSpline> _splinesBestYet;
-
-    // 'mutable' lets us modify the member inside const member functions, such
-    // as objectiveFunc() above.
 
     /// Counts the number of calls to objectiveFunc.
     mutable int _objectiveCalls;
