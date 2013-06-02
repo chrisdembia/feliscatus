@@ -63,7 +63,7 @@ protected:
 	double _legsWidth;
     double _legsMass;
 
-	static const int _maxTorque = 20; // N-m
+	static const int _maxTorque = 40; // N-m
 
 	Body * _anteriorLegs;
 	Body * _posteriorLegs;
