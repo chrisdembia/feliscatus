@@ -45,11 +45,6 @@ using SimTK::Vec3;
 namespace OpenSim
 {
 
-// TODO add a term to reduce the amount of torque necessary to do the action, to
-// avoid superfluous motion.
-// TODO normalize time
-// TODO move manager code outside of the objective function loop if possible.
-// TODO figure out how to space out control points over time.
 // TODO we assume that minControl is negative.
 
 /**
@@ -234,7 +229,7 @@ public:
         _cat = Model(_tool.get_model_filename());
 
         if (_tool.get_heavy_point_mass_legs())
-        {
+        { // See description of this property above.
             _cat.updBodySet().get("anteriorLegs").setMass(_cat.getBodySet().get("anteriorBody").getMass());
             _cat.updBodySet().get("posteriorLegs").setMass(_cat.getBodySet().get("posteriorBody").getMass());
             _cat.updBodySet().get("anteriorLegs").setInertia(SimTK::Inertia(0, 0, 0));
@@ -313,17 +308,7 @@ public:
         // Create a header row in the log.
         _optLog << "objective_calls " <<
             "objective_fcn_value " <<
-            "objective_fcn_value_best_yet ";
-        for (int iAct = 0; iAct < _numActuators; iAct++)
-        {
-            for (int iPts = 0; iPts < _numOptimSplinePoints; iPts++)
-            {
-                _optLog << _cat.getActuators().get(iAct).getName() << "_"
-                    << iPts << " ";
-            }
-        }
-        _optLog << endl;
-        
+            "objective_fcn_value_best_yet" << endl;
     }
 
     /**
