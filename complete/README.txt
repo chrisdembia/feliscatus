@@ -19,15 +19,15 @@ variety of degrees of freedom, defined by Dembia and Sketch. This executable
 actually generates many model files, not just one. All the models are fairly
 distinct from the one described by Kane and Scher, 1969.
 
-model_kanescherfig2.cpp [footnote 1]
+model_kanescherfig2.cpp [see footnote 1]
 ------------------------------------
 Creates a model based off that in Kane and Scher, 1969; figure 2.
 
-model_kanescherfig3.cpp [footnote 1]
+model_kanescherfig3.cpp [see footnote 1]
 ------------------------------------
 Creates a model based off that in Kane and Scher, 1969; figure 3.
 
-model_kaneschercombined.cpp [footnote 1]
+model_kaneschercombined.cpp [see footnote 1]
 ----------------------------------------
 Attempts to combine figures 2 and 3 from Kane and Scher, 1969.
 

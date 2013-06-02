@@ -1,6 +1,10 @@
 
 #include "FelisCatusModeling.h"
 
+using OpenSim::CoordinateCouplerConstraint;
+using OpenSim::LinearFunction;
+using OpenSim::PinJoint;
+
 using OpenSim::FreeJoint;
 
 /**
@@ -18,19 +22,13 @@ using OpenSim::FreeJoint;
  * 	   maneuver is more pronounced that its initial or final forward
  * 	   bends.
  * We combine figures 2 and 3 from the paper by trying to introduce a loop in
- * the kinematic graph.
+ * the kinematic topology.
  *
- * NOTE The model is not valid, and thus this code is incomplete.
- *
- * We use the general convention that body origins are at joint locations,
- * and thus mass centers are specified to be some distance away. Furthermore,
- * the model contains several "dummy" frames (i.e., massless
- * bodies) that are used to specify rotational relations between the anterior
- * and posterior segments of the cat.
+ * NOTE: The model is not valid, and thus this code is incomplete.
  * */
 class KaneScherCombinedModeling : public FelisCatusModeling
 {
-    void addJoints();
+    void addBaseJointsAndBodies();
 };
 
 /** Creates a FelisCatus model with a spinal joint defined by Kane and Scher,
@@ -39,8 +37,8 @@ class KaneScherCombinedModeling : public FelisCatusModeling
 int main(int argc, char *argv[])
 {
     KaneScherCombinedModeling m;
-    m.makeModel("Leland_kaneschercombined",
-            "feliscatus_kaneschercombined.osim");
+    m.makeModel("Leland_kaneschercombined");
+    m.printModel("feliscatus_kaneschercombined.osim");
 
     return EXIT_SUCCESS;
 }
@@ -55,9 +53,9 @@ int main(int argc, char *argv[])
  *                   Bintermed -> posteriorBody <------------
  * 
  * */
-void KaneScherCombinedModeling::addJoints()
+void KaneScherCombinedModeling::addBaseJointsAndBodies()
 {
-    Body & ground = cat.getGroundBody();
+    Body & ground = _cat.getGroundBody();
 
     // I'm calling massless bodies "frames". Here are all the ones I'm
     // using:
@@ -136,7 +134,7 @@ void KaneScherCombinedModeling::addJoints()
     Vec3 orientAIAinAnterior(0, -0.5 * Pi, 0);
     PinJoint * AintermedAnterior = new PinJoint("Aintermed_anterior",
             *Aintermed, locAIAinAintermed, orientAIAinAintermed,
-            *anteriorBody, locAIAinAnterior, orientAIAinAnterior);
+            *_anteriorBody, locAIAinAnterior, orientAIAinAnterior);
     CoordinateSet & AintermedAnteriorCS =
         AintermedAnterior->upd_CoordinateSet();
     // "integ" because this coord is the integral of the speed u.
@@ -153,7 +151,7 @@ void KaneScherCombinedModeling::addJoints()
     Vec3 orientBIBinPosterior(0, -0.5 * Pi, 0);
     PinJoint * BintermedPosterior = new PinJoint("Bintermed_posterior",
             *Bintermed, locBIBinBintermed, orientBIBinBintermed,
-            *posteriorBody, locBIBinPosterior, orientBIBinPosterior);
+            *_posteriorBody, locBIBinPosterior, orientBIBinPosterior);
     CoordinateSet & BintermedPosteriorCS =
         BintermedPosterior->upd_CoordinateSet();
     BintermedPosteriorCS[0].setName("kane_v_integ");
@@ -173,7 +171,7 @@ void KaneScherCombinedModeling::addJoints()
 	Vec3 locationAKinFrameK(0);
 	Vec3 orientationAKinFrameK(0);
 	PinJoint* anteriorFrameK = new PinJoint("anterior_K",
-		*anteriorBody, locationAKInAnterior, orientationAKInAnterior,
+		*_anteriorBody, locationAKInAnterior, orientationAKInAnterior,
 		*frameK, locationAKinFrameK, orientationAKinFrameK, false);
 	CoordinateSet& anteriorFrameKCS = anteriorFrameK->upd_CoordinateSet();
 	anteriorFrameKCS[0].setName("kane_alpha");
@@ -249,7 +247,7 @@ void KaneScherCombinedModeling::addJoints()
 	Vec3 orientationB2PostInPosterior(Pi, 0, 0.5 * Pi);
 	FreeJoint* FrameB2Posterior = new FreeJoint("B2_posterior",
 		*frameB2, locationB2PostInFrameB2, orientationB2PostInFrameB2,
-        *posteriorBody, locationB2PostInPosterior,
+        *_posteriorBody, locationB2PostInPosterior,
         orientationB2PostInPosterior, false);
 	CoordinateSet& FrameB2PosteriorCS = FrameB2Posterior->upd_CoordinateSet();
 	FrameB2PosteriorCS[0].setName("temp_free0");
@@ -295,15 +293,15 @@ void KaneScherCombinedModeling::addJoints()
 
     // --- Add bodies.
     // Need to do this before the constraints.
-    cat.addBody(frameQ);
-    cat.addBody(Aintermed);
-    cat.addBody(Bintermed);
-    cat.addBody(anteriorBody);
-    cat.addBody(posteriorBody);
+    _cat.addBody(frameQ);
+    _cat.addBody(Aintermed);
+    _cat.addBody(Bintermed);
+    _cat.addBody(_anteriorBody);
+    _cat.addBody(_posteriorBody);
     // Sean's figure 2 bodies.
-    cat.addBody(frameK);
-    cat.addBody(frameP);
-    cat.addBody(frameB2);
+    _cat.addBody(frameK);
+    _cat.addBody(frameP);
+    _cat.addBody(frameB2);
 
     // --- Constraints.
     // -- Constraint between intermediate frames.
@@ -314,8 +312,6 @@ void KaneScherCombinedModeling::addJoints()
             Array<string>("kane_gammaA", 1));
     intermedConstr->setDependentCoordinateName("kane_gammaB");
     Array<double> intermedConstrFcnCoeff;
-    // TODO I don't understand hw these coefficients work and
-    // I think the documentation is insufficient.
     intermedConstrFcnCoeff.append(-1);
     intermedConstr->setFunction(new LinearFunction(intermedConstrFcnCoeff));
 
@@ -327,13 +323,11 @@ void KaneScherCombinedModeling::addJoints()
             Array<string>("kane_u_integ", 1));
     twistConstr->setDependentCoordinateName("kane_v_integ");
     Array<double> twistConstrFcnCoeff;
-    // TODO I don't understand how these coefficients work and
-    // I think the documentation is insufficient.
     twistConstrFcnCoeff.append(1);
     twistConstr->setFunction(new LinearFunction(twistConstrFcnCoeff));
 
     // -- Add constraints to model.
-    cat.addConstraint(intermedConstr);
-    cat.addConstraint(twistConstr);
+    _cat.addConstraint(intermedConstr);
+    _cat.addConstraint(twistConstr);
 
 }

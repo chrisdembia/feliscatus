@@ -82,9 +82,9 @@ endmacro()
 
 # Call the macro above for creation of the Kane and Scher model based off their
 # Figure 2.
-#ADD_MODEL_EXECUTABLE(model_kanescherfig2)
+ADD_MODEL_EXECUTABLE(model_kanescherfig2)
 # ...and now for the Kane and Scher model based off their Figure 3.
-#ADD_MODEL_EXECUTABLE(model_kanescherfig3)
+ADD_MODEL_EXECUTABLE(model_kanescherfig3)
 # Combining figures 2 and 3.
 #ADD_MODEL_EXECUTABLE(model_kaneschercombined)
 

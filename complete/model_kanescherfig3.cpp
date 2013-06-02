@@ -22,16 +22,13 @@ using OpenSim::PointToPointSpring;
  * 	   bends.
  * These salient features are implemented starting with Figure 2 of their paper.
  *
- * We use the general convention that body origins are at joint locations,
- * and thus mass centers are specified to be some distance away. Furthermore,
- * the model contains several "dummy" frames (i.e., massless
- * bodies) that are used to specify rotational relations between the anterior
- * and posterior segments of the cat.
+ * NOTE: In its current state, this code does not correctly implement Kane and
+ * Scher's model.
  * */
 class KaneScherFig3Modeling : public FelisCatusModeling
 {
-    void addJoints();
-    void addActuators();
+    void addBaseJointsAndBodies();
+    void addBaseForcesAndActuation();
 };
 
 /** Creates a FelisCatus model with a spinal joint defined by Kane and Scher,
@@ -40,13 +37,14 @@ class KaneScherFig3Modeling : public FelisCatusModeling
 int main(int argc, char *argv[])
 {
     KaneScherFig3Modeling m;
-    m.makeModel("Leland_kanescherfig3", "feliscatus_kanescherfig3.osim");
+    m.makeModel("Leland_kanescherfig3");
+    m.printModel("feliscatus_kanescherfig3.osim");
 
     return EXIT_SUCCESS;
 }
 
 /**
- * The topology (?) with this joint is:
+ * The topology with this joint is:
  * 
  *                   Aintermed -> anteriorBody
  *                 /
@@ -55,9 +53,9 @@ int main(int argc, char *argv[])
  *                   Bintermed -> posteriorBody
  * 
  * */
-void KaneScherFig3Modeling::addJoints()
+void KaneScherFig3Modeling::addBaseJointsAndBodies()
 {
-    Body & ground = cat.getGroundBody();
+    Body & ground = _cat.getGroundBody();
 
     // I'm calling massless bodies "frames". Here are all the ones I'm
     // using:
@@ -75,10 +73,8 @@ void KaneScherFig3Modeling::addJoints()
     // TODO need some description here.
     // Y rotation to place the joint axis in the ground's X-Y plane.
     Vec3 orientGQInGround(0, 0.5 * Pi, 0);
-    // TODO X rotation to offset the fixed location of the joint axis in
-    // space,
-    // TODO so that it is inclined from the ground X axis, toward the
-    // ground Y axis.
+    // TODO X rotation to offset the fixed location of the joint axis in space,
+    // so that it is inclined from the ground X axis, toward the ground Y axis.
     // TODO Vec3 orientGQInGround(0.25 * Pi, 0.5 * Pi, 0);
     Vec3 locGQInFrameQ(0);
     // Y rotation to undo previous rotation on other side of joint so that
@@ -95,7 +91,6 @@ void KaneScherFig3Modeling::addJoints()
     groundFrameQCS[0].setRange(groundFrameQCS0range);
     groundFrameQCS[0].setDefaultValue(0.0);
     groundFrameQCS[0].setDefaultLocked(false);
-    // TODO Change the above to a CustomJoint soon.
 
     // Connect Aintermed(iate) to Q.
     Vec3 locQAIinFrameQ(0);
@@ -136,7 +131,7 @@ void KaneScherFig3Modeling::addJoints()
     Vec3 orientAIAinAnterior(0, -0.5 * Pi, 0);
     PinJoint * AintermedAnterior = new PinJoint("Aintermed_anterior",
             *Aintermed, locAIAinAintermed, orientAIAinAintermed,
-            *anteriorBody, locAIAinAnterior, orientAIAinAnterior);
+            *_anteriorBody, locAIAinAnterior, orientAIAinAnterior);
     CoordinateSet & AintermedAnteriorCS =
         AintermedAnterior->upd_CoordinateSet();
     // "integ" because this coord is the integral of the speed u.
@@ -153,7 +148,7 @@ void KaneScherFig3Modeling::addJoints()
     Vec3 orientBIBinPosterior(0, -0.5 * Pi, 0);
     PinJoint * BintermedPosterior = new PinJoint("Bintermed_posterior",
             *Bintermed, locBIBinBintermed, orientBIBinBintermed,
-            *posteriorBody, locBIBinPosterior, orientBIBinPosterior);
+            *_posteriorBody, locBIBinPosterior, orientBIBinPosterior);
     CoordinateSet & BintermedPosteriorCS =
         BintermedPosterior->upd_CoordinateSet();
     BintermedPosteriorCS[0].setName("kane_v_integ");
@@ -174,11 +169,11 @@ void KaneScherFig3Modeling::addJoints()
 
     // --- Add bodies.
     // Need to do this before the constraints.
-    cat.addBody(frameQ);
-    cat.addBody(Aintermed);
-    cat.addBody(Bintermed);
-    cat.addBody(anteriorBody);
-    cat.addBody(posteriorBody);
+    _cat.addBody(frameQ);
+    _cat.addBody(Aintermed);
+    _cat.addBody(Bintermed);
+    _cat.addBody(_anteriorBody);
+    _cat.addBody(_posteriorBody);
 
     // --- Constraints.
     // -- Constraint between intermediate frames.
@@ -189,8 +184,6 @@ void KaneScherFig3Modeling::addJoints()
             Array<string>("kane_gammaA", 1));
     intermedConstr->setDependentCoordinateName("kane_gammaB");
     Array<double> intermedConstrFcnCoeff;
-    // TODO I don't understand hw these coefficients work and
-    // I think the documentation is insufficient.
     intermedConstrFcnCoeff.append(-1);
     intermedConstr->setFunction(new LinearFunction(intermedConstrFcnCoeff));
 
@@ -202,31 +195,30 @@ void KaneScherFig3Modeling::addJoints()
             Array<string>("kane_u_integ", 1));
     twistConstr->setDependentCoordinateName("kane_v_integ");
     Array<double> twistConstrFcnCoeff;
-    // TODO I don't understand hw these coefficients work and
-    // I think the documentation is insufficient.
     twistConstrFcnCoeff.append(1);
     twistConstr->setFunction(new LinearFunction(twistConstrFcnCoeff));
 
     // -- Add constraints to model.
-    cat.addConstraint(intermedConstr);
-    cat.addConstraint(twistConstr);
-
-    // TODO get rid of intermediates using GimbalJoint.
+    _cat.addConstraint(intermedConstr);
+    _cat.addConstraint(twistConstr);
     
 }
 
-void KaneScherFig3Modeling::addActuators()
+void KaneScherFig3Modeling::addBaseForcesAndActuation()
 {
-    // TODO change this to addForces()?
+    // This actuator is here to play around with the idea of using linear
+    // actuators to actuate Kane and Scher's model. It is not actually part of
+    // the Kane and Scher model itself.
+
     string body1Name = "anteriorBody";
-    Vec3 point1(-0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
+    Vec3 point1(-0.5 * _segmentalLength, 0, 0.5 * _segmentalDiam);
     string body2Name = "posteriorBody";
-    Vec3 point2(0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
+    Vec3 point2(0.5 * _segmentalLength, 0, 0.5 * _segmentalDiam);
     double stiffness = 1.0;
-    double restlength = 0.75 * segmentalLength;
+    double restlength = 0.75 * _segmentalLength;
     PointToPointSpring * act1 = new PointToPointSpring(body1Name, point1,
                                                        body2Name, point2,
                                                        stiffness, restlength);
     act1->setName("test_spin");
-    cat.addForce(act1);
+    _cat.addForce(act1);
 }

@@ -31,125 +31,100 @@ using SimTK::convertDegreesToRadians;
  *
  * We use the general convention that body origins are at joint locations,
  * and thus mass centers are specified to be some distance away. Furthermore,
- * the model contains "dummy" frames (i.e., massless bodies) that can be used
- * to specify rotational relations between the anterior and posterior segments
- * of the cat.
+ * the model generally contains "dummy" frames (i.e., massless bodies) that can
+ * be used to specify rotational relations between the anterior and posterior
+ * segments of the cat.
+ *
+ * We assume that all models are 2-segments models, with mass/inertial
+ * properties given by the member variables of this class. The model can be
+ * extended to have more than 2 Body's, but we assume that there are only 2
+ * torso Body's/segments.
  * */
 class FelisCatusModeling
 {
 public:
 
+    FelisCatusModeling()
+    {
+        // Constants/parameters.
+        _segmentalLength = 0.175;		         // m
+        _segmentalDiam = 0.15;			         // m
+        _segmentalMass = 1;				         // kg
+        _segmentalTransverseMomentOfInertia = 1; // kg-m^2
+        _JIratio = 0.25; // from Kane and Scher (1969)
+
+        _zeroInertia = Inertia(0, 0, 0, 0, 0, 0);
+    }
+
     // @param modelName Name of the OpenSim::Model object being created.
-    // @param fileName Name/path of the OpenSim::Model file to write.
-    void makeModel(string modelName, string fileName)
+    virtual void makeModel(string modelName)
     {
         // Create the model.
-        cat = Model();
-        cat.setName(modelName);
-        cat.setGravity(Vec3(0, 0, 0));
+        _cat = Model();
+        _cat.setName(modelName);
+        _cat.setGravity(Vec3(0, 0, 0));
 
-        // Constants/parameters.
-        segmentalLength = 0.175;		 // m
-        segmentalDiam = 0.15;			 // m
-        segmentalMass = 1;				 // kg
-		legsLength = 0.125;				 // m
-		legsDiam = 0.1 * legsLength;	 // m
-        // Sum of both legs (60% distance across the belly):
-		legsWidth = 0.6 * segmentalDiam; // m
-		legsMass = 0.2;					 // kg
-        // Transverse central moment of inertia:
-        I = 1;                           // kg-m^2
-        JIratio = 0.25; // from Kane and Scher (1969)
-        // Axial moment of inertia:
-        double J = JIratio * I;
-        double Ixx = J;
-        double Iyy = I;
-        double Izz = I;
-        double Ixy = 0;
-        double Ixz = 0;
-        double Iyz = 0;
-        segmentalInertia = Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
-		legsInertia = (legsMass/segmentalMass) * segmentalInertia;
-        zeroInertia = Inertia(0, 0, 0, 0, 0, 0);
+        createBaseBodies();
+        addBaseDisplayGeometry();
+        addBaseJointsAndBodies();
+        addBaseForcesAndActuation();
+    }
 
-        addBodies();
-        addDisplayGeometry();
+    // @param fileName Name/path of the OpenSim::Model file to write.
+    void printModel(string fileName)
+    {
+        _cat.print(fileName);
     }
 
 protected:
 
     // Member variables.
-    Model cat;
-    Body * anteriorBody;
-    Body * posteriorBody;
-	Body * anteriorLegs;
-	Body * posteriorLegs;
+    Model _cat;
+    Body * _anteriorBody;
+    Body * _posteriorBody;
 
-    // Constants/parameters.
-    double segmentalLength;
-    double segmentalDiam;
-    double segmentalMass;
-	double legsLength;
-    double legsDiam;
-	double legsWidth;
-    double legsMass;
-    double I;
-    double JIratio;
-    Inertia segmentalInertia;
-	Inertia legsInertia;
-    Inertia zeroInertia;
+    // Constants/parameters/properties.
+    double _segmentalLength;
+    double _segmentalDiam;
+    double _segmentalMass;
+    double _segmentalTransverseMomentOfInertia;
+    double _JIratio;
+    /// For convenience; not necessarily a cat property. May or may not be used.
+    Inertia _zeroInertia;
 
-    // Body construction and mass properties. This function does not include
-    // massless bodies necessary to define some joint types.
-    void addBodies()
+    /// Body construction and mass properties. This function does not include
+    /// massless bodies necessary to define some joint types.
+    /// Does not add any Body's to the model.
+    void createBaseBodies()
     {
+        double segmentalAxialMoment = _JIratio * _segmentalTransverseMomentOfInertia;
+        double Ixx = segmentalAxialMoment;
+        double Iyy = _segmentalTransverseMomentOfInertia;
+        double Izz = _segmentalTransverseMomentOfInertia;
+        double Ixy = 0;
+        double Ixz = 0;
+        double Iyz = 0;
+        Inertia segmentalInertia = Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
+
         // Anterior half of cat.
-        anteriorBody = new Body();
-        anteriorBody->setName("anteriorBody");
-        anteriorBody->setMass(segmentalMass);
-        anteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0, 0));
-        anteriorBody->setInertia(segmentalInertia);
+        _anteriorBody = new Body();
+        _anteriorBody->setName("anteriorBody");
+        _anteriorBody->setMass(_segmentalMass);
+        _anteriorBody->setMassCenter(Vec3(-0.5 * _segmentalLength, 0, 0));
+        _anteriorBody->setInertia(segmentalInertia);
 
         // Posterior half of cat.
-        posteriorBody = new Body();
-        posteriorBody->setName("posteriorBody");
-        posteriorBody->setMass(segmentalMass);
-        posteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0, 0));
-        posteriorBody->setInertia(segmentalInertia);
-
-		// Legs.
-        anteriorLegs = new Body();
-        anteriorLegs->setName("anteriorLegs");
-        anteriorLegs->setMass(legsMass);
-        anteriorLegs->setMassCenter(Vec3(0.5 * legsLength, 0, 0));
-        anteriorLegs->setInertia(legsInertia);
-		
-		posteriorLegs = new Body();
-        posteriorLegs->setName("posteriorLegs");
-        posteriorLegs->setMass(legsMass);
-        posteriorLegs->setMassCenter(Vec3(0.5 * legsLength, 0, 0));
-        posteriorLegs->setInertia(legsInertia);
+        _posteriorBody = new Body();
+        _posteriorBody->setName("posteriorBody");
+        _posteriorBody->setMass(_segmentalMass);
+        _posteriorBody->setMassCenter(Vec3(0.5 * _segmentalLength, 0, 0));
+        _posteriorBody->setInertia(segmentalInertia);
     }
 
-    // For help with creating joints that require intermediate frames
-	// (i.e., massless bodies).
-    Body * newMasslessBody(string name)
+    /// Adds display geometry to all bodies.
+    void addBaseDisplayGeometry()
     {
-        Body * massless = new Body();
-        massless->setName(name);
-        massless->setMass(0);
-        massless->setMassCenter(Vec3(0));
-        massless->setInertia(zeroInertia);
-        return massless;
-    }
-    
-    // Adds display geometry to all bodies.
-    void addDisplayGeometry()
-    {
-        Body & ground = cat.getGroundBody();
-
-        // Ground.
-        ground.addDisplayGeometry("treadmill.vtp");
+        Body & ground = _cat.getGroundBody();
 
         // Anterior body.
         DisplayGeometry * anteriorDisplay = 
@@ -158,37 +133,38 @@ protected:
         anteriorDisplay->setColor(Vec3(0.5, 0.5, 0.5));
         Rotation rot;
         rot.setRotationFromAngleAboutZ(0.5 * Pi);
-        anteriorDisplay->setTransform(Transform(rot, Vec3(-0.5 * segmentalLength, 0, 0)));
-		anteriorDisplay->setScaleFactors(Vec3(segmentalDiam, segmentalLength, segmentalDiam));
-        anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorDisplay);
-        anteriorBody->updDisplayer()->setShowAxes(true);
+        anteriorDisplay->setTransform(Transform(rot, Vec3(-0.5 * _segmentalLength, 0, 0)));
+		anteriorDisplay->setScaleFactors(Vec3(_segmentalDiam, _segmentalLength, _segmentalDiam));
+        _anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorDisplay);
+        _anteriorBody->updDisplayer()->setShowAxes(true);
 
         // Posterior body.
         DisplayGeometry * posteriorDisplay = 
             new DisplayGeometry("cylinder.vtp");
         posteriorDisplay->setOpacity(0.5);
         posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
-		posteriorDisplay->setTransform(Transform(rot, Vec3(0.5 * segmentalLength, 0, 0)));
-		posteriorDisplay->setScaleFactors(Vec3(segmentalDiam, segmentalLength, segmentalDiam));
-        posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorDisplay);
-        posteriorBody->updDisplayer()->setShowAxes(true);
+		posteriorDisplay->setTransform(Transform(rot, Vec3(0.5 * _segmentalLength, 0, 0)));
+		posteriorDisplay->setScaleFactors(Vec3(_segmentalDiam, _segmentalLength, _segmentalDiam));
+        _posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorDisplay);
+        _posteriorBody->updDisplayer()->setShowAxes(true);
+    }
 
-		// Legs.
-		DisplayGeometry * anteriorLegsDisplay = new DisplayGeometry("box.vtp");
-        anteriorLegsDisplay->setOpacity(0.5);
-        anteriorLegsDisplay->setColor(Vec3(0.7, 0.7, 0.7));
-		anteriorLegsDisplay->setTransform(Transform(Vec3(0.3 * legsLength, 0, 0)));
-		anteriorLegsDisplay->setScaleFactors(Vec3(legsLength, legsDiam, legsWidth));
-        anteriorLegs->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorLegsDisplay);
-        anteriorLegs->updDisplayer()->setShowAxes(true);
+    /** This method is repsonsible for adding anteriorBody and posteriorBody to
+     * the model. */
+    virtual void addBaseJointsAndBodies() = 0;
 
-		DisplayGeometry * posteriorLegsDisplay = new DisplayGeometry("box.vtp");
-        posteriorLegsDisplay->setOpacity(0.5);
-        posteriorLegsDisplay->setColor(Vec3(0.7, 0.7, 0.7));
-		posteriorLegsDisplay->setTransform(Transform(Vec3(0.3 * legsLength, 0, 0)));
-		posteriorLegsDisplay->setScaleFactors(Vec3(legsLength, legsDiam, legsWidth));
-        posteriorLegs->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorLegsDisplay);
-        posteriorLegs->updDisplayer()->setShowAxes(true);
+    virtual void addBaseForcesAndActuation() { }
+
+    /// For help with creating joints that require intermediate frames
+    /// (i.e., massless bodies).
+    Body * newMasslessBody(string name)
+    {
+        Body * massless = new Body();
+        massless->setName(name);
+        massless->setMass(0);
+        massless->setMassCenter(Vec3(0));
+        massless->setInertia(_zeroInertia);
+        return massless;
     }
 };
 

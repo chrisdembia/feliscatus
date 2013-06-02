@@ -24,11 +24,14 @@ using SimTK::convertDegreesToRadians;
  * 	   bends.
  * 
  * These salient features are implemented starting with Figure 2 of their paper.
+ *
+ * NOTE: In its current state, this code does not correctly implement Kane and
+ * Scher's model.
  * */
 class KaneScherFig2Modeling : public FelisCatusModeling
 {
-    void addJoints();
-	void addActuators();
+    void addBaseJointsAndBodies();
+	void addBaseForcesAndActuation();
 };
 
 /** 
@@ -43,15 +46,14 @@ class KaneScherFig2Modeling : public FelisCatusModeling
 int main(int argc, char *argv[])
 {
     KaneScherFig2Modeling m;
-    m.makeModel("Leland_kanescherfig2", "feliscatus_kanescherfig2.osim");
+    m.makeModel("Leland_kanescherfig2");
+    m.printModel("feliscatus_kanescherfig2.osim");
 
     return EXIT_SUCCESS;
 }
 
-void KaneScherFig2Modeling::addJoints()
+void KaneScherFig2Modeling::addBaseJointsAndBodies()
 {	
-	// -- Define additional bodies and joints.
-	//
 	// NOTE: Massless bodies are simply coordinate frames for rotation. We
     // ----  have attempted to be as faithful to Kane and Scher (1969) as
     //       possible. See their paper to understand the notation used.
@@ -65,7 +67,7 @@ void KaneScherFig2Modeling::addJoints()
 	// as in 'model_dembiasketch'). Rotation is defined via ZXY Euler angles,
 	// named flip, u_integ (AKA. sprawl), and roll respectively. The important
 	// translation is in Y, the direction of gravity.
-	Body& ground = cat.getGroundBody();
+	Body& ground = _cat.getGroundBody();
 	
 	SpatialTransform groundAnteriorST;
     groundAnteriorST.updTransformAxis(0).setCoordinateNames(
@@ -94,7 +96,7 @@ void KaneScherFig2Modeling::addJoints()
 
     CustomJoint* groundAnterior = new CustomJoint("ground_anterior",
             ground, locGAInGround, orientGAInGround,
-            *anteriorBody, locGAInAnterior, orientGAInAnterior,
+            *_anteriorBody, locGAInAnterior, orientGAInAnterior,
             groundAnteriorST);
 
     CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
@@ -121,7 +123,7 @@ void KaneScherFig2Modeling::addJoints()
     // ty
     double groundAnteriorCS4range[2] = {-1, 100};
     groundAnteriorCS[4].setRange(groundAnteriorCS4range);
-    groundAnteriorCS[4].setDefaultValue(4);
+    groundAnteriorCS[4].setDefaultValue(0);
 	groundAnteriorCS[4].setDefaultLocked(false);
     // tz
     double groundAnteriorCS5range[2] = {-5, 5};
@@ -137,7 +139,7 @@ void KaneScherFig2Modeling::addJoints()
 	Vec3 locationAKinFrameK(0);
 	Vec3 orientationAKinFrameK(0);
 	PinJoint* anteriorFrameK = new PinJoint("anterior_K",
-		*anteriorBody, locationAKInAnterior, orientationAKInAnterior,
+		*_anteriorBody, locationAKInAnterior, orientationAKInAnterior,
 		*frameK, locationAKinFrameK, orientationAKinFrameK, false);
 	CoordinateSet& anteriorFrameKCS = anteriorFrameK->upd_CoordinateSet();
 	anteriorFrameKCS[0].setName("kane_alpha");
@@ -197,7 +199,7 @@ void KaneScherFig2Modeling::addJoints()
 	Vec3 orientationB2PostInPosterior(Pi, 0, 0.5 * Pi);
 	PinJoint* FrameB2Posterior = new PinJoint("B2_posterior",
 		*frameB2, locationB2PostInFrameB2, orientationB2PostInFrameB2,
-		*posteriorBody, locationB2PostInPosterior, orientationB2PostInPosterior, false);
+		*_posteriorBody, locationB2PostInPosterior, orientationB2PostInPosterior, false);
 	CoordinateSet& FrameB2PosteriorCS = FrameB2Posterior->upd_CoordinateSet();
 	FrameB2PosteriorCS[0].setName("kane_v_integ");
 	double FrameB2PosteriorCS0range[2] = {-Pi, Pi};
@@ -205,43 +207,18 @@ void KaneScherFig2Modeling::addJoints()
 	FrameB2PosteriorCS[0].setDefaultValue(0);
 	FrameB2PosteriorCS[0].setDefaultLocked(false);
 
-	// TODO: Adding "legs" as plates pinned to the underside of each half
-	// of the cat.
-	/*legLength = 1;
-	legWidth = 1;
-	legMass = 1;
-	comLocInBody = Vec3(0.0,0.0,0.0);
-	bodyInertia = Inertia(1.0,1.0,1.0,0.0,0.0,0.0);
-	Body* frontLegs = new Body("frontLegs", legMass, comLocInBody, bodyInertia);
-	locationInParent = Vec3(0.0,-thighLength/2.0,0.0);
-	orientationInParent = Vec3(0.0,0.0,0.0);
-	locationInChild = Vec3(0.0,shankLength/2.0,0.0);
-	orientationInChild = Vec3(0.0,0.0,0.0);
-	PinJoint *rightKnee = new PinJoint("RightShankToThigh", *rightThigh, locationInParent, orientationInParent, *rightShank, locationInChild, orientationInChild, false);
-	CoordinateSet &rightKneeJoint = rightKnee->upd_CoordinateSet();
-	rightKneeJoint[0].setName("RKnee_rz");
-	double rotRangeRightKnee[2] = {convertDegreesToRadians(-100.0), 0.0};
-	rightKneeJoint[0].setRange(rotRangeRightKnee);
-	rightKneeJoint[0].setDefaultValue(convertDegreesToRadians(-30.0));
-	rightShank->addDisplayGeometry("sphere.vtp");
-	rightShank->updDisplayer()->setScaleFactors(Vec3(shankLength/10.0,shankLength,shankLength/10.0));
-	osimModel.addBody(rightShank);*/
-
 	// TODO: add N, define gamma?
 
     // -- Add bodies.
-    cat.addBody(anteriorBody);
-	cat.addBody(frameK);
-	cat.addBody(frameP);
-	cat.addBody(frameB2);
-    cat.addBody(posteriorBody);
+    _cat.addBody(_anteriorBody);
+	_cat.addBody(frameK);
+	_cat.addBody(frameP);
+	_cat.addBody(frameB2);
+    _cat.addBody(_posteriorBody);
 	//cat.addBody(frameN);
-	//cat.addBody(frontFeet);
-	//cat.addBody(backFeet);
 
-	// TODO: add contact (in header file)
-
-	// -- Add "no-twist" constraint. (TODO: is this right? don't we want to constrain speeds?)
+    // -- Add "no-twist" constraint. (TODO: is this right? don't we want to
+    // constrain speeds?)
 	CoordinateCouplerConstraint * twistConstr = new CoordinateCouplerConstraint();
     twistConstr->setName("twist");
     twistConstr->setIndependentCoordinateNames(Array<string>("kane_u_integ", 1));
@@ -249,22 +226,26 @@ void KaneScherFig2Modeling::addJoints()
     Array<double> twistConstrFcnCoeff;
     twistConstrFcnCoeff.append(1);
     twistConstr->setFunction(new LinearFunction(twistConstrFcnCoeff));
-	cat.addConstraint(twistConstr);
+	_cat.addConstraint(twistConstr);
 }
 
-void KaneScherFig2Modeling::addActuators()
+void KaneScherFig2Modeling::addBaseForcesAndActuation()
 {
+    // This actuator is here to play around with the idea of using linear
+    // actuators to actuate Kane and Scher's model. It is not actually part of
+    // the Kane and Scher model itself.
+
     // Two springs connecting the anterior and posterior halves of
 	// the cat, positioned symmetrically about its midline, act as
 	// abdomen muscles.
 	string body1Name = "anteriorBody";
 	string body2Name = "posteriorBody";
-    Vec3 point1L(-0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
-    Vec3 point2L(0.5 * segmentalLength, 0, 0.5 * segmentalDiam);
-	Vec3 point1R(-0.5 * segmentalLength, 0, -0.5 * segmentalDiam);
-    Vec3 point2R(0.5 * segmentalLength, 0, -0.5 * segmentalDiam);
+    Vec3 point1L(-0.5 * _segmentalLength, 0, 0.5 * _segmentalDiam);
+    Vec3 point2L(0.5 * _segmentalLength, 0, 0.5 * _segmentalDiam);
+	Vec3 point1R(-0.5 * _segmentalLength, 0, -0.5 * _segmentalDiam);
+    Vec3 point2R(0.5 * _segmentalLength, 0, -0.5 * _segmentalDiam);
     double stiffness = 1.0;
-    double restlength = 0.75 * segmentalLength;
+    double restlength = 0.75 * _segmentalLength;
     PointToPointSpring * absL = new PointToPointSpring(body1Name, point1L,
                                                        body2Name, point2L,
                                                        stiffness, restlength);
@@ -273,6 +254,6 @@ void KaneScherFig2Modeling::addActuators()
                                                        stiffness, restlength);
     absL->setName("left_abs");
 	absR->setName("right_abs");
-	cat.addForce(absL);
-	cat.addForce(absR);
+	_cat.addForce(absL);
+	_cat.addForce(absR);
 }
