@@ -38,9 +38,6 @@ int main(int argc, char *argv[])
     Model cat(modelFileName);
     cat.setUseVisualizer(true);
 
-    // To aid with visualization.
-    cat.setGravity(Vec3(0, 0, 0));
-
     // --- Prepare for integration.
     State& initState = cat.initSystem();
 
