@@ -4,6 +4,14 @@
 
 using OpenSim::FelisCatusOptimizerTool;
 
+/**
+ * Creates a serialization of a FelisCatusOptimizerTool for each model created
+ * by 'model_tree'. With all of these XML inputs/serializations, one could then
+ * run an optimization on all models in some batched manner, perhaps in a
+ * parallel way and/or on a remote computing cluster.
+ *
+ * Some of this code is copied from the 'model_tree' executable.
+ * */
 int main(int argc, char *argv[])
 {
     vector<bool> bothOptions;

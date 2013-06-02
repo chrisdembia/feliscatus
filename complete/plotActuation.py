@@ -8,6 +8,13 @@
 # Note that this script requires a version of OpenSim v3.1.WW or higher;
 # earlier versions did not have FunctionSet exposed.
 #
+# One can run this script within the GUI by executing the following in the GUI
+# scripting shell:
+#
+# >>> execfile(<STRING_PATH_TO_THIS_FILE>)
+#
+# or via the toolbar: Scripts > Run
+#
 # Authors: Chris Dembia, Sean Sketch
 # Date: 19 May 2013
 

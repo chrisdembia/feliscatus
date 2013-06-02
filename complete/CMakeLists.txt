@@ -78,23 +78,19 @@ SET(OSIM_LIBRARIES
 MACRO(ADD_MODEL_EXECUTABLE EXEC_NAME)
     ADD_EXECUTABLE(${EXEC_NAME} ${EXEC_NAME}.cpp FelisCatusModeling.h)
     TARGET_LINK_LIBRARIES(${EXEC_NAME} ${OSIM_LIBRARIES})
-
 endmacro()
 
-# Call the macro above for creation of the model with the Dembia, Sketch joint.
-#ADD_MODEL_EXECUTABLE(model_dembiasketch)
-# ...and now for the Kane, Scher spinal joint based off their Figure 2.
+# Call the macro above for creation of the Kane and Scher model based off their
+# Figure 2.
 #ADD_MODEL_EXECUTABLE(model_kanescherfig2)
-# ...and now for the Kane, Scher spinal joint based off their Figure 3.
+# ...and now for the Kane and Scher model based off their Figure 3.
 #ADD_MODEL_EXECUTABLE(model_kanescherfig3)
 # Combining figures 2 and 3.
 #ADD_MODEL_EXECUTABLE(model_kaneschercombined)
 
-# Creating all models in "model tree" with one executable
-# NOTE: Without any internal actuation, the model has no chance of flipping.
-# ----  For this reason, there are no completely rigid models (just body or
-#	body + legs).
-ADD_MODEL_EXECUTABLE(modelTree)
+# Creating so-called custom models, so-called Dembia and Sketch models, in
+# "model tree" with one executable.
+ADD_MODEL_EXECUTABLE(model_tree)
 
 SET(SIMULATE_EXEC_NAME simulate)
 ADD_EXECUTABLE(${SIMULATE_EXEC_NAME} simulate.cpp)
@@ -102,28 +98,20 @@ TARGET_LINK_LIBRARIES(${SIMULATE_EXEC_NAME} ${OSIM_LIBRARIES})
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 
-ADD_EXECUTABLE(optimize
-    optimize.cpp
-    FelisCatusOptimizerSystem.h
-    )
+ADD_EXECUTABLE(optimize optimize.cpp FelisCatusOptimizerSystem.h)
 TARGET_LINK_LIBRARIES(optimize ${OSIM_LIBRARIES})
 
-ADD_EXECUTABLE(optimizer_tool_template
-    optimizer_tool_template.cpp
-    FelisCatusOptimizerSystem.h
-    )
+ADD_EXECUTABLE(optimizer_tool_template optimizer_tool_template.cpp
+    FelisCatusOptimizerSystem.h)
 TARGET_LINK_LIBRARIES(optimizer_tool_template ${OSIM_LIBRARIES})
 
 ADD_EXECUTABLE(prescribe prescribe.cpp)
 TARGET_LINK_LIBRARIES(prescribe ${OSIM_LIBRARIES})
 
-ADD_EXECUTABLE(batch
-    batch.cpp
-    FelisCatusOptimizerSystem.h
-    )
+ADD_EXECUTABLE(batch batch.cpp FelisCatusOptimizerSystem.h)
 TARGET_LINK_LIBRARIES(batch ${OSIM_LIBRARIES})
-	
-# ----- Old script stuff for reference.
+
+# ----- Reference/examples of how to copy files from source to build.
 
 # Copy Geometry files to the OpenSim Geometry folder, so that OpenSim can find
 # the geometry files specified in the model file. This is only necessary if we

@@ -2,18 +2,20 @@
 #include "FelisCatusModeling.h"
 
 /**
- * This creates a "tree" of cat models, starting with a "zero-
- * degree-of-freedom" (DOF) base case and adding complexity (i.e.,
- * DOFs) one step at a time. Each cat model consists of two cylindrical
+ * This class allows for the creation of a "tree" of cat models, starting with
+ * a "zero- degree-of-freedom" (DOF) base case and adding complexity (i.e.,
+ * DOFs) iteratively. Each cat model consists of two cylindrical
  * segments connected by a three-DOF (back flexion or 'hunch', spinal
  * twist, and side bending or 'wag') joint. Each model restricts the
  * DOFs of this joint to a different degree. In addition, some models
- * includes legs; some are rigid, normal to the cat's underside, while
+ * includes legs; some are rigid and normal to the cat's underside, while
  * others are "retractable," allowing the cat to change the effective
- * moment of inertia of each of its halves.
+ * moment of inertia of its two halves. Any of these models can be used in
+ * input to the 'optimize' executable, though it may be necessary to set some
+ * of the objective weights to 0 depending on the model used (i.e., can't use
+ * an objective that depends on legs if the model does not have legs).
  * */
-
-class FelisCatusModel : public FelisCatusModeling
+class FelisCatusDembiaSketch : public FelisCatusModeling
 {
 public:
 
@@ -23,7 +25,7 @@ public:
 
     // member functions to allow for stepwise model creation
 	// NOTE: each 'add' function takes care of actuators if necessary
-	FelisCatusModel(string modelName, string fileName,
+	FelisCatusDembiaSketch(string modelName, string fileName,
 		bool canTwist, bool canHunch, bool canWag,
         LegsType whichLegs, TailType whichTail);
 	void createBaseCase();
@@ -50,16 +52,16 @@ int main(int argc, char *argv[])
     vector<bool> canHunch = bothOptions;
     vector<bool> canWag = bothOptions;
 
-    vector<FelisCatusModel::LegsType> whichLegs;
-    whichLegs.push_back(FelisCatusModel::NoLegs);
-    whichLegs.push_back(FelisCatusModel::Rigid);
-    whichLegs.push_back(FelisCatusModel::RetractBack);
-    whichLegs.push_back(FelisCatusModel::Retract);
+    vector<FelisCatusDembiaSketch::LegsType> whichLegs;
+    whichLegs.push_back(FelisCatusDembiaSketch::NoLegs);
+    whichLegs.push_back(FelisCatusDembiaSketch::Rigid);
+    whichLegs.push_back(FelisCatusDembiaSketch::RetractBack);
+    whichLegs.push_back(FelisCatusDembiaSketch::Retract);
 
-    vector<FelisCatusModel::TailType> whichTail;
-    whichTail.push_back(FelisCatusModel::NoTail);
-    whichTail.push_back(FelisCatusModel::FixedPerch);
-    whichTail.push_back(FelisCatusModel::FreePerch);
+    vector<FelisCatusDembiaSketch::TailType> whichTail;
+    whichTail.push_back(FelisCatusDembiaSketch::NoTail);
+    whichTail.push_back(FelisCatusDembiaSketch::FixedPerch);
+    whichTail.push_back(FelisCatusDembiaSketch::FreePerch);
 
     for (unsigned int it = 0; it < canTwist.size(); it++)
     {
@@ -71,28 +73,33 @@ int main(int argc, char *argv[])
                 {
                     for (int iT = 0; iT < whichTail.size(); iT++)
                     {
-                        string modifier = "_";
+                        string modifier;
                         modifier += canTwist[it] ? "Twist" : "";
                         modifier += canHunch[ih] ? "Hunch" : "";
                         modifier += canWag[iw] ? "Wag" : "";
 
                         switch (whichLegs[iL])
                         {
-                            case FelisCatusModel::Rigid:
+                            case FelisCatusDembiaSketch::Rigid:
                                 modifier += "RigidLegs"; break;
-                            case FelisCatusModel::RetractBack:
+                            case FelisCatusDembiaSketch::RetractBack:
                                 modifier += "RetractBackLeg"; break;
-                            case FelisCatusModel::Retract:
+                            case FelisCatusDembiaSketch::Retract:
                                 modifier += "RetractLegs"; break;
                         }
                         switch (whichTail[iT])
                         {
-                            case FelisCatusModel::FixedPerch:
+                            case FelisCatusDembiaSketch::FixedPerch:
                                 modifier += "FixedPerchTail"; break;
-                            case FelisCatusModel::FreePerch:
+                            case FelisCatusDembiaSketch::FreePerch:
                                 modifier += "FreePerchTail"; break;
                         }
-                        FelisCatusModel("Leland" + modifier,
+
+                        // Only prepend underscore if this is not the zero-DOF
+                        // model.
+                        if (modifier != "") modifier = "_" + modifier;
+
+                        FelisCatusDembiaSketch("Leland" + modifier,
                                 "feliscatus" + modifier + ".osim",
                                 canTwist[it], canHunch[ih], canWag[iw],
                                 whichLegs[iL], whichTail[iT]);
@@ -105,7 +112,7 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 };
 
-FelisCatusModel::FelisCatusModel(string modelName, string fileName,
+FelisCatusDembiaSketch::FelisCatusDembiaSketch(string modelName, string fileName,
         bool canTwist, bool canHunch, bool canWag,
         LegsType whichLegs, TailType whichTail)
 {
@@ -140,7 +147,7 @@ FelisCatusModel::FelisCatusModel(string modelName, string fileName,
 	cat.print(fileName);
 }
 
-void FelisCatusModel::createBaseCase()
+void FelisCatusDembiaSketch::createBaseCase()
 {
     Body & ground = cat.getGroundBody();
 
@@ -258,7 +265,7 @@ void FelisCatusModel::createBaseCase()
     cat.addBody(posteriorBody);
 }
 
-void FelisCatusModel::addTwist()
+void FelisCatusDembiaSketch::addTwist()
 {
 	// Unlock twist.
 	cat.updCoordinateSet().get("twist").setDefaultLocked(false);
@@ -276,7 +283,7 @@ void FelisCatusModel::addTwist()
 	cat.addForce(twistLimitForce);
 }
 
-void FelisCatusModel::addHunch()
+void FelisCatusDembiaSketch::addHunch()
 {
 	// Unlock hunch and change default so that cat is initially hunched.
 	cat.updCoordinateSet().get("hunch").setDefaultLocked(false);
@@ -296,7 +303,7 @@ void FelisCatusModel::addHunch()
 	cat.addForce(hunchLimitForce);
 }
 
-void FelisCatusModel::addWag()
+void FelisCatusDembiaSketch::addWag()
 {
 	// Unlock wag.
 	cat.updCoordinateSet().get("wag").setDefaultLocked(false);
@@ -314,7 +321,7 @@ void FelisCatusModel::addWag()
 	cat.addForce(wagLimitForce);
 }
 
-void FelisCatusModel::addRigidLegs()
+void FelisCatusDembiaSketch::addRigidLegs()
 {
 	Vec3 locALegsInAnterior(-0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
     Vec3 orientALegsInAnterior(0);
@@ -339,7 +346,7 @@ void FelisCatusModel::addRigidLegs()
 	cat.addBody(posteriorLegs);
 }
 
-void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
+void FelisCatusDembiaSketch::addRetractLegs(bool frontLegsRetract)
 {
 	// Adding 1-DOF legs.
 	Vec3 locALegsInAnterior(-0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
@@ -408,7 +415,7 @@ void FelisCatusModel::addRetractLegs(bool frontLegsRetract)
 	cat.addForce(backLegsLimitForce);
 }
 
-void FelisCatusModel::addTail(TailType whichTail)
+void FelisCatusDembiaSketch::addTail(TailType whichTail)
 {
     // For now, only considering Two-DOF tail: one that can 'pitch', then can
     // rotate in a cone with that pitch.
@@ -482,7 +489,7 @@ void FelisCatusModel::addTail(TailType whichTail)
         addCoordinateActuator("perch");
 }
 
-void FelisCatusModel::addCoordinateActuator(string coordinateName)
+void FelisCatusDembiaSketch::addCoordinateActuator(string coordinateName)
 {
     CoordinateActuator * act = new CoordinateActuator(coordinateName);
     act->setName(coordinateName + "_actuator");

@@ -17,7 +17,10 @@ using OpenSim::FreeJoint;
  * 	3) The backwards bend that the cat experiences during its turning
  * 	   maneuver is more pronounced that its initial or final forward
  * 	   bends.
- * We combine figures 2 and 3 from the paper.
+ * We combine figures 2 and 3 from the paper by trying to introduce a loop in
+ * the kinematic graph.
+ *
+ * NOTE The model is not valid, and thus this code is incomplete.
  *
  * We use the general convention that body origins are at joint locations,
  * and thus mass centers are specified to be some distance away. Furthermore,
@@ -92,7 +95,7 @@ void KaneScherCombinedModeling::addJoints()
     groundFrameQCS[0].setRange(groundFrameQCS0range);
     groundFrameQCS[0].setDefaultValue(0.0);
     groundFrameQCS[0].setDefaultLocked(false);
-    // TODO Change the above to a CustomJoint soon.
+    // TODO Change the above to a CustomJoint.
 
     // Connect Aintermed(iate) to Q.
     Vec3 locQAIinFrameQ(0);
@@ -324,7 +327,7 @@ void KaneScherCombinedModeling::addJoints()
             Array<string>("kane_u_integ", 1));
     twistConstr->setDependentCoordinateName("kane_v_integ");
     Array<double> twistConstrFcnCoeff;
-    // TODO I don't understand hw these coefficients work and
+    // TODO I don't understand how these coefficients work and
     // I think the documentation is insufficient.
     twistConstrFcnCoeff.append(1);
     twistConstr->setFunction(new LinearFunction(twistConstrFcnCoeff));

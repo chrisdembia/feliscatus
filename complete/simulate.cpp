@@ -77,7 +77,5 @@ int main(int argc, char *argv[])
 
     manager.integrate(initState);
 
-    // Memory management.
-
     return EXIT_SUCCESS;
 }

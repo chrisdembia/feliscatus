@@ -44,7 +44,6 @@ using SimTK::convertDegreesToRadians;
  * to specify rotational relations between the anterior and posterior segments
  * of the cat.
  * */
-
 class FelisCatusModeling
 {
 public:
