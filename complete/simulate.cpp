@@ -20,7 +20,7 @@ using SimTK::Vec3;
 using SimTK::Visualizer;
 
 /**
- * Simulates a cat model using the Simbody visualizer.
+ * Simulates a cat model (forward dyanmics) using the Simbody visualizer.
  * */
 int main(int argc, char *argv[])
 {
@@ -69,8 +69,6 @@ int main(int argc, char *argv[])
     // Integrate from initial time to final time
     manager.setInitialTime(0);
     manager.setFinalTime(1.0);
-
-    sleep(1.0);
 
     manager.integrate(initState);
 
