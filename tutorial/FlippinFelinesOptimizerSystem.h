@@ -73,6 +73,7 @@ public:
             "relative to the configuration term for a given objective weight "
             "above");
 
+    // Task-space objective terms.
     OpenSim_DECLARE_PROPERTY(taskspace_anterior_legs_down_weight, double,
             "Weighting on deviation (as a squared vector magnitude) from "
             "desired_anterior_feet_pos_from_pivot_point_in_ground. This task-space "
@@ -143,13 +144,14 @@ public:
 		constructProperty_yaw_weight(1.0);
 		constructProperty_sagittal_symmetry_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
-		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_relative_velaccel_weight(1.0);
 
         constructProperty_taskspace_anterior_legs_down_weight(0.0);
         constructProperty_taskspace_posterior_legs_down_weight(0.0);
         constructProperty_desired_anterior_feet_pos_from_pivot_point_in_ground(SimTK::Vec3(-1, -1, 0));
         constructProperty_desired_posterior_feet_pos_from_pivot_point_in_ground(SimTK::Vec3(1, -1, 0));
+
+		constructProperty_use_coordinate_limit_forces(true);
 
         constructProperty_initial_parameters_filename("");
     }

@@ -23,13 +23,14 @@ int main(int argc, char * argv[])
 	tool.set_yaw_value(0.0);
 	tool.set_yaw_weight(1.0);
     tool.set_legs_prepared_for_landing_weight(1.0);
-	tool.set_use_coordinate_limit_forces(true);
     tool.set_relative_velaccel_weight(0.1);
 
     tool.set_taskspace_anterior_legs_down_weight(0.0);
     tool.set_taskspace_posterior_legs_down_weight(0.0);
     tool.set_desired_anterior_feet_pos_from_pivot_point_in_ground(SimTK::Vec3(-1, -1, 0));
     tool.set_desired_posterior_feet_pos_from_pivot_point_in_ground(SimTK::Vec3(1, -1, 0));
+
+	tool.set_use_coordinate_limit_forces(true);
 
     tool.set_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
     tool.print(filename);

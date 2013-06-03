@@ -13,19 +13,16 @@
  * */
 int main(int argc, char * argv[])
 {
-    // Get the filename of the FlippinFelinesOptimizerTool serialization.
     // argc is the number of command line inputs, INCLUDING the name of the
     //      exectuable as well. Thus, it'll always be greater than/equal to 1.
     // argv is an array of space-delimited command line inputs, the first one
     //      necessarily being the name of the executable.
-    std::string help = "Must specify the name of a FlippinFelinesOptimizerTool "
-        "serialization (setup/input file).\n\nExamples:\n\t"
-        "optimize feliscatusoptimizertool_template.xml\n";
 
+    // Get the filename of the FlippinFelinesOptimizerTool serialization.
     if (argc == 2)
     { // Correct number of inputs.
 
-        // Parse inputs using the Tool class.
+        // Parse inputs using our Tool class.
         std::string toolSetupFile = argv[1];
         OpenSim::FlippinFelinesOptimizerTool tool(toolSetupFile);
         std::string name = tool.get_results_directory();
@@ -62,7 +59,7 @@ int main(int argc, char * argv[])
         }
         catch (...)
         {
-            // Print the last model so we have something to look at.
+            // Print the last model/controls so we have something to look at.
             sys.printModel(name + "_last.osim");
             sys.printPrescribedControllerFunctionSet(
                     name + "_last_parameters.xml");
@@ -75,7 +72,10 @@ int main(int argc, char * argv[])
     }
     else
     { // Too few/many inputs, etc.
-        std::cout << "\nIncorrect input provided. " << help << std::endl;
+        std::cout << "\nIncorrect input provided. "
+            "Must specify the name of a FlippinFelinesOptimizerTool "
+            "serialization (setup/input file).\n\nExamples:\n\t"
+            "optimize feliscatusoptimizertool_template.xml\n" << endl;
         return 0;
     }
 
