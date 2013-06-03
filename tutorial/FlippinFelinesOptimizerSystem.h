@@ -440,14 +440,14 @@ public:
 
         // ====================================================================
         f = 0;
-        f += anterior_legs_down_term(roll, rollRate, rollAccel);
-        f += posterior_legs_down_term(twist, twistRate, twistAccel);
-        f += hunch_term(hunch, hunchRate, hunchAccel);
-        f += wag_term(wag, wagRate, wagAccel);
-        f += yaw_term(yaw, yawRate, yawAccel);
-        f += sagittal_symmetry_term(hunch, pitch, pitchRate, pitchAccel);
-        f += legs_prepared_for_landing_term(aState, coordinates);
-        f += taskspace_terms(aState, coordinates);
+        f += anteriorLegsDownTerm(roll, rollRate, rollAccel);
+        f += posteriorLegsDownTerm(twist, twistRate, twistAccel);
+        f += hunchTerm(hunch, hunchRate, hunchAccel);
+        f += wagTerm(wag, wagRate, wagAccel);
+        f += yawTerm(yaw, yawRate, yawAccel);
+        f += sagittalSymmetryTerm(hunch, pitch, pitchRate, pitchAccel);
+        f += legsPreparedForLandingTerm(aState, coordinates);
+        f += taskspaceTerms(aState, coordinates);
         // ====================================================================
 
         // Update the log.
@@ -568,7 +568,7 @@ private:
     // definition) for efficiency: the compiler will 'paste' the function body
     // into the place where the function is called.
 
-    double anterior_legs_down_term(
+    double anteriorLegsDownTerm(
             double roll, double rollRate, double rollAccel) const
     {
         if (_tool.get_anterior_legs_down_weight() != 0.0)
@@ -579,7 +579,7 @@ private:
         return 0.0;
     }
 
-    double posterior_legs_down_term(
+    double posteriorLegsDownTerm(
             double twist, double twistRate, double twistAccel) const
     {
         if (_tool.get_posterior_legs_down_weight() != 0.0)
@@ -590,7 +590,7 @@ private:
         return 0.0;
     }
 
-    double hunch_term(
+    double hunchTerm(
             double hunch, double hunchRate, double hunchAccel) const
     {
         if (_tool.get_hunch_weight() != 0.0)
@@ -602,7 +602,7 @@ private:
         return 0.0;
     }
 
-    double wag_term(
+    double wagTerm(
             double wag, double wagRate, double wagAccel) const
     {
         if (_tool.get_wag_weight() != 0.0)
@@ -614,7 +614,7 @@ private:
         return 0.0;
     }
 
-    double yaw_term(
+    double yawTerm(
             double yaw, double yawRate, double yawAccel) const
     {
         if (_tool.get_yaw_weight() != 0.0)
@@ -626,7 +626,7 @@ private:
         return 0.0;
     }
 
-    double sagittal_symmetry_term(
+    double sagittalSymmetryTerm(
             double hunch, double pitch, double pitchRate, double pitchAccel) const
     {
         if (_tool.get_sagittal_symmetry_weight() != 0.0)
@@ -637,7 +637,7 @@ private:
         return 0.0;
     }
 
-    double legs_prepared_for_landing_term(
+    double legsPreparedForLandingTerm(
             State& aState, const CoordinateSet & coordinates) const
     {
         if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
@@ -659,7 +659,7 @@ private:
         return 0.0;
     }
 
-    double taskspace_terms(State& aState, const CoordinateSet & coordinates) const
+    double taskspaceTerms(State& aState, const CoordinateSet & coordinates) const
     {
         if (_tool.get_taskspace_anterior_legs_down_weight() != 0.0 ||
                 _tool.get_taskspace_posterior_legs_down_weight() != 0.0)
