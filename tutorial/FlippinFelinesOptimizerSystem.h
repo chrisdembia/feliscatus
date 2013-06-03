@@ -1,4 +1,3 @@
-
 #ifndef FELISCATUSOPTIMIZERSYSTEM_H
 #define FELISCATUSOPTIMIZERSYSTEM_H
 
@@ -57,11 +56,6 @@ public:
             "Directory in which to save optimization log and results");
     OpenSim_DECLARE_PROPERTY(model_filename, string,
             "Specifies path to model file, WITH .osim extension");
-    OpenSim_DECLARE_PROPERTY(duration, double,
-            "Duration of forward dynamics simulation (seconds)");
-    OpenSim_DECLARE_PROPERTY(optimizer_algorithm, string,
-            "Enum, as a string, for the Optimizer algorithm to use "
-            "Options are BestAvailable, InteriorPoint, LBFGS, LBFGSB, CFSQP")
     OpenSim_DECLARE_PROPERTY(num_optim_spline_points, int,
             "Number of points being optimized in each spline function. "
             "Constant across all splines. If an initial_parameters_filename is "
@@ -96,25 +90,13 @@ public:
             "Adds a term to the objective to minimize final difference "
             "between yaw and the specified yaw value, as well as the "
 			"related speeds");
-	OpenSim_DECLARE_PROPERTY(legs_separation, double,
-            "Angle between legs (radians) - if Pi/2, for example, one leg "
-			"pointed up forces the other to be aligned with the body");
-	OpenSim_DECLARE_PROPERTY(legs_separation_weight, double,
-            "Adds a term to the objective to force the legs to be separated "
-			"by the specified angle");
     OpenSim_DECLARE_PROPERTY(legs_prepared_for_landing_weight, double,
             "Adds terms to the objective to minimize final value of "
             "frontLegs, backLegs, and related speeds");
-	OpenSim_DECLARE_PROPERTY(use_coordinate_limit_forces, bool,
-            "TRUE: use coordinate limit forces, "
-			"FALSE: ignore coordinate limit forces");
     OpenSim_DECLARE_PROPERTY(relative_velaccel_weight, double,
             "Weighting of velocity and acceleration objective terms, "
             "relative to the configuration term for a given objective weight "
             "above");
-    OpenSim_DECLARE_PROPERTY(large_twist_penalty_weight, double,
-            "Weighting on penalty for twist being below -Pi/2 or above 3Pi/2 "
-            "at any point in the simulation");
 
     OpenSim_DECLARE_PROPERTY(taskspace_anterior_legs_down_weight, double,
             "Weighting on deviation (as a squared vector magnitude) from "
@@ -133,9 +115,9 @@ public:
             "Only relevant if using nonzero taskspace_posterior_legs_down_weight."); 
 
     // Modifying the model before optimizing.
-    OpenSim_DECLARE_OPTIONAL_PROPERTY(heavy_point_mass_legs, bool,
-            "Legs have same mass as the body to which it's attached; legs "
-            "have zero inertia. Overrides whatever is in the model.");
+	OpenSim_DECLARE_PROPERTY(use_coordinate_limit_forces, bool,
+            "TRUE: use coordinate limit forces, "
+			"FALSE: ignore coordinate limit forces");
 
     // Setting initial parameters for the optimization.
     OpenSim_DECLARE_OPTIONAL_PROPERTY(initial_parameters_filename, string,
@@ -145,7 +127,7 @@ public:
             "(cannot just leave it blank). The name of each function must be "
             "identical to that of the actuator it is for. x values are ignored. "
             "The time values that are actually used in the simulation are "
-            "equally spaced from t = 0 to t = duration, and there should be "
+            "equally spaced from t = 0 to t = 1.0 s, and there should be "
 			"as many points in each function as given by the num_optim_spline_points "
             "property. y values should be nondimensional and between -1 and 1 "
             "(negative values normalized by minControl if minControl is "
@@ -175,8 +157,6 @@ public:
     {
         constructProperty_results_directory("results");
         constructProperty_model_filename("feliscatus_*FILL THIS IN*.osim");
-        constructProperty_duration(1.0);
-        constructProperty_optimizer_algorithm("BestAvailable");
         constructProperty_num_optim_spline_points(20);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
@@ -187,19 +167,14 @@ public:
 		constructProperty_wag_weight(1.0);
 		constructProperty_yaw_value(0.0);
 		constructProperty_yaw_weight(1.0);
-		constructProperty_legs_separation(Pi/2);
-		constructProperty_legs_separation_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
 		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_relative_velaccel_weight(1.0);
-        constructProperty_large_twist_penalty_weight(0.0);
 
         constructProperty_taskspace_anterior_legs_down_weight(0.0);
         constructProperty_taskspace_posterior_legs_down_weight(0.0);
         constructProperty_desired_anterior_feet_pos_from_pivot_point_in_ground(Vec3(-1, -1, 0));
         constructProperty_desired_posterior_feet_pos_from_pivot_point_in_ground(Vec3(1, -1, 0));
-
-        constructProperty_heavy_point_mass_legs(false);
 
         constructProperty_initial_parameters_filename("");
     }
@@ -226,6 +201,7 @@ public:
      * */
     FelisCatusOptimizerSystem(OpenSim::FelisCatusOptimizerTool & tool) :
         _tool(tool),
+        _duration(1.0),
         _objectiveCalls(0),
         _objectiveFcnValueBestYet(SimTK::Infinity),
         _anteriorFeetPosFromPivotPointInAnterior(Vec3(-1, 1, 0)),
@@ -234,15 +210,6 @@ public:
         // Parse inputs.
         _name = _tool.get_results_directory();
         _cat = Model(_tool.get_model_filename());
-
-        // -- Modify leg inertial parameters?
-        if (_tool.get_heavy_point_mass_legs())
-        { // See description of this property above.
-            _cat.updBodySet().get("anteriorLegs").setMass(_cat.getBodySet().get("anteriorBody").getMass());
-            _cat.updBodySet().get("posteriorLegs").setMass(_cat.getBodySet().get("posteriorBody").getMass());
-            _cat.updBodySet().get("anteriorLegs").setInertia(SimTK::Inertia(0, 0, 0));
-            _cat.updBodySet().get("posteriorLegs").setInertia(SimTK::Inertia(0, 0, 0));
-        }
 
 		// -- Disable coordinate limit forces?
 		if (!_tool.get_use_coordinate_limit_forces())
@@ -303,7 +270,7 @@ public:
 
         // - Create SimmSpline's for each actuator.
         double indexToTimeInSeconds =
-            _tool.get_duration() / (double)(_numOptimSplinePoints - 1);
+            _duration / (double)(_numOptimSplinePoints - 1);
         for (int i = 0; i < _numActuators; i++)
         {
             // Create a function for this actuator.
@@ -439,7 +406,7 @@ public:
 
         // Integrate from initial time to final time
         manager.setInitialTime(0);
-        manager.setFinalTime(_tool.get_duration());
+        manager.setFinalTime(_duration);
 
         // --------------------------------------------------------------------
         manager.integrate(initState);
@@ -609,42 +576,6 @@ public:
             }
         }
 
-        // -- Conditions that do not just depend on final state.
-        // NOTE: MUST ADD ALL NEED-STATE-STORAGE conditions to this boolean.
-        bool needStateStorage =
-            (_tool.get_legs_separation_weight() != 0.0 || _tool.get_large_twist_penalty_weight() != 0.0);
-
-        if (needStateStorage)
-        {
-            Storage stateSto = manager.getStateStorage();
-
-            if (_tool.get_large_twist_penalty_weight() != 0.0)
-            {
-                Array<double> twistHist;
-                stateSto.getDataColumn("twist", twistHist);
-                double maxTwist = -SimTK::Infinity;
-                double minTwist = SimTK::Infinity;
-                for (int iT = 0; iT < twistHist.getSize(); iT++)
-                {
-                    // Assumes angles are in radians.
-                    maxTwist = std::max(maxTwist, twistHist[iT] - 1.5 * Pi);
-                    minTwist = std::min(minTwist, twistHist[iT] - (-0.5 * Pi));
-                }
-                double term = 0.0;
-                if (maxTwist > 0)
-                { // Wouldn't want to add in a negative contribution.
-                    term += _tool.get_large_twist_penalty_weight() * pow(maxTwist, 2);
-                }
-                if (minTwist < 0)
-                {
-                    // Must negate so that this contribution to f is positive.
-                    term += _tool.get_large_twist_penalty_weight() * pow(minTwist, 2);
-                }
-                if (_objectiveCalls % _objLogPeriod == 0)
-                    _objLog << " large_twist_penalty " << term;
-                f += term;
-            }
-        }
         // ====================================================================
 
         // Update the log.
@@ -779,6 +710,9 @@ private:
 
     /// See constructor.
     int _numOptimSplinePoints;
+
+    /// The amount of time for which the simulation runs. Units of seconds.
+    double _duration;
 
     /// Number of actuators in the model.
     int _numActuators;
