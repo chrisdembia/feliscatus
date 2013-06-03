@@ -185,9 +185,9 @@ public:
 
 /**
  * Finds a control input history that achieves certain desired
- * features of a cat's flipping maneuver. The control of the system
- * is performed via a PrescribedController that uses a spline for all
- * actuators.
+ * features of a cat's flipping maneuver, as determined by the objective
+ * function. The control of the system is performed via a PrescribedController
+ * that uses a spline for all actuators.
  *
  * Parameters are odered by actuator, then by spline point index for a given
  * actuator. Parameters are nondimensionalized by the min or max control
@@ -197,7 +197,7 @@ class FelisCatusOptimizerSystem : public OptimizerSystem
 {
 public:
     /**
-     * @param tool Contains all necessary input information.
+     * @param tool Contains all input settings.
      * */
     FelisCatusOptimizerSystem(OpenSim::FelisCatusOptimizerTool & tool) :
         _tool(tool),
@@ -208,7 +208,8 @@ public:
         _posteriorFeetPosFromPivotPointInPosterior(Vec3(1, 1, 0)),
         _relw(_tool.get_relative_velaccel_weight())
     {
-        // Parse inputs.
+        // Parse inputs
+        // --------------------------------------------------------------------
         _name = _tool.get_results_directory();
         _cat = Model(_tool.get_model_filename());
 
@@ -230,6 +231,9 @@ public:
 
         _numOptimSplinePoints = _tool.get_num_optim_spline_points();
 
+        // Prepare output
+        // --------------------------------------------------------------------
+
         // Create a directory for all the output files we'll create.
 		#if defined(_WIN32)
 			_mkdir(_name.c_str());
@@ -241,15 +245,13 @@ public:
         // to keep everything in one nice organized place.
         _tool.print(_name + "/" + _name + "_setup.xml");
 
-        // Create a log.
+        // Create a log for the objective function value and the separate terms
+        // that go into it.
         _optLog.open((_name + "/" + _name + "_log.txt").c_str(), ofstream::out);
-        _optLog << "Felis Catus optimization log." << endl;
+        _optLog << "Flippin Felines optimization log: " << name << endl;
         time_t rawtime; time(&rawtime);
         _optLog << ctime(&rawtime);
         _optLog << "Model file name: " << _tool.get_model_filename() << endl;
-
-        // Create the log that prints out the objective function's terms.
-        _objLog.open((_name + "/" + _name + "_objlog.txt").c_str(), ofstream::out);
 
         // Compute the number of optimization parameters we'll have.
         _numActuators = _cat.getActuators().getSize();
@@ -296,10 +298,6 @@ public:
         Vector lowerLimits(getNumParameters(), -1.0);
         Vector upperLimits(getNumParameters(), 1.0);
         setParameterLimits(lowerLimits, upperLimits);
-
-        // Create a header row in the log.
-        _optLog << "objective_calls " << "objective_fcn_value " <<
-            "objective_fcn_value_best_yet" << endl;
     }
 
     /**
@@ -355,7 +353,6 @@ public:
     ~FelisCatusOptimizerSystem()
     {
         _optLog.close();
-        _objLog.close();
     }
 
     int objectiveFunc(const Vector & parameters,
@@ -415,8 +412,9 @@ public:
 
         // --- Construct the objective function value, term by term.
         // Will be writing to a log while constructing objective function val.
-        if (_objectiveCalls % _objLogPeriod == 0)
-            _objLog << _objectiveCalls << " ";
+        if (_objectiveCalls % _logPeriod == 0)
+            _optLog << _objectiveCalls << " ";
+
         // Create a copy of the init state; we need a consistent state.
         State aState = initState;
         _cat.getMultibodySystem().realize(aState, Stage::Acceleration);
@@ -456,9 +454,9 @@ public:
         _lastCallWasBestYet = _thisCallIsBestYet;
         _thisCallIsBestYet = f <= _objectiveFcnValueBestYet;
         if (_thisCallIsBestYet) _objectiveFcnValueBestYet = f;
-        _optLog << _objectiveCalls << " " << f << " " << _objectiveFcnValueBestYet << endl;
-        if (_objectiveCalls % _objLogPeriod == 0)
-            _objLog << " objfcn " << f << " objfcn_best_yet " << _objectiveFcnValueBestYet << endl;
+
+        if (_objectiveCalls % _logPeriod == 0)
+            _optLog << " objfcn " << f << " objfcn_best_yet " << _objectiveFcnValueBestYet << endl;
 
         // If this is the best yet, save a copy of the splines.
         if (_thisCallIsBestYet)
@@ -486,15 +484,6 @@ public:
             cout << "Objective call # " << _objectiveCalls << endl;
 
         return 0;
-    }
-
-    /**
-     * Allows whoever has an instance of this class to write something to
-     * the log. For example, the optimum value of the objective function.
-     * */
-    void printToLog(string message)
-    {
-        _optLog << message << endl;
     }
 
     int getObjectiveCalls() const { return _objectiveCalls; }
@@ -586,8 +575,8 @@ private:
         {
             double term = _tool.get_anterior_legs_down_weight() * (
                     pow(roll - Pi, 2) + _relw * pow(rollRate, 2) + _relw * pow(rollAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " anterior_legs_down " << term;
+            if (_objectiveCalls % _logPeriod == 0)
+                _optLog << " anterior_legs_down " << term;
             return term;
         }
         return 0.0;
@@ -600,8 +589,8 @@ private:
         {
             double term = _tool.get_posterior_legs_down_weight() * (
                     pow(twist - 0.0, 2) + _relw * pow(twistRate, 2) + _relw * pow(twistAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " posterior_legs_down " << term;
+            if (_objectiveCalls % _logPeriod == 0)
+                _optLog << " posterior_legs_down " << term;
             return term;
         }
         return 0.0;
@@ -615,8 +604,8 @@ private:
             double hunchGoal = _tool.get_hunch_value();
             double term = _tool.get_hunch_weight() * (
                     pow(hunch - hunchGoal, 2) + _relw * pow(hunchRate, 2) + _relw * pow(hunchAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " hunch " << term;
+            if (_objectiveCalls % _logPeriod == 0)
+                _optLog << " hunch " << term;
             return term;
         }
         return 0.0;
@@ -629,8 +618,8 @@ private:
         {
             double term = _tool.get_sagittal_symmetry_weight() * (
                     pow(hunch + 2 * pitch, 2) + _relw * pow(pitchRate, 2) + _relw * pow(pitchAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " sagittal_symmetry " << term;
+            if (_objectiveCalls % _logPeriod == 0)
+                _optLog << " sagittal_symmetry " << term;
             return term;
         }
         return 0.0;
@@ -644,8 +633,8 @@ private:
             double wagGoal = _tool.get_wag_value();
             double term = _tool.get_wag_weight() * (
                     pow(wag - wagGoal, 2) + _relw * pow(wagRate, 2) + _relw * pow(wagAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " wag " << term;
+            if (_objectiveCalls % _logPeriod == 0)
+                _optLog << " wag " << term;
             return term;
         }
         return 0.0;
@@ -659,15 +648,15 @@ private:
             double yawGoal = _tool.get_yaw_value();
             double term = _tool.get_yaw_weight() * (
                     pow(yaw - yawGoal, 2) + _relw * pow(yawRate, 2) + _relw * pow(yawAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " yaw " << term;
+            if (_objectiveCalls % _logPeriod == 0)
+                _optLog << " yaw " << term;
             return term;
         }
         return 0.0;
     }
 
     double legs_prepared_for_landing_term(
-            State aState, const CoordinateSet & coordinates) const
+            State& aState, const CoordinateSet & coordinates) const
     {
         if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
         {
@@ -683,14 +672,14 @@ private:
                     pow(frontLegs, 2) + _relw * pow(frontLegsRate, 2) + _relw * pow(frontLegsAccel, 2));
             double termB = _tool.get_legs_prepared_for_landing_weight() * (
                     pow(backLegs, 2) + _relw * pow(backLegsRate, 2) + _relw * pow(backLegsAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " legs_prepared_for_landing " << termA + termB;
+            if (_objectiveCalls % _logPeriod == 0)
+                _optLog << " legs_prepared_for_landing " << termA + termB;
             return termA + termB;
         }
         return 0.0;
     }
 
-    double taskspace_terms(State aState, const CoordinateSet & coordinates) const
+    double taskspace_terms(State& aState, const CoordinateSet & coordinates) const
     {
         if (_tool.get_taskspace_anterior_legs_down_weight() != 0.0 ||
                 _tool.get_taskspace_posterior_legs_down_weight() != 0.0)
@@ -725,8 +714,8 @@ private:
                 // magnitude(diff)^2
                 double termA = _tool.get_taskspace_anterior_legs_down_weight() * (
                         SimTK::dot(diff, diff));
-                if (_objectiveCalls % _objLogPeriod == 0)
-                    _objLog << " taskspace_anterior_legs_down " << termA;
+                if (_objectiveCalls % _logPeriod == 0)
+                    _optLog << " taskspace_anterior_legs_down " << termA;
                 toReturn += termA;
             }
 
@@ -751,8 +740,8 @@ private:
                 // magnitude(diff)^2
                 double termB = _tool.get_taskspace_posterior_legs_down_weight() * (
                         SimTK::dot(diff, diff));
-                if (_objectiveCalls % _objLogPeriod == 0)
-                    _objLog << " taskspace_posterior_legs_down " << termB;
+                if (_objectiveCalls % _logPeriod == 0)
+                    _optLog << " taskspace_posterior_legs_down " << termB;
                 toReturn += termB;
 
             }
@@ -761,14 +750,17 @@ private:
         return 0.0;
     }
 
+    // Member variables
+    // ========================================================================
+
     /// See constructor.
     string _name;
 
     /// See constructor.
     OpenSim::FelisCatusOptimizerTool & _tool;
 
-    // 'mutable' lets us modify the member inside const member functions, such
-    // as objectiveFunc() above.
+    // 'mutable' lets us modify the member variable inside const member
+    // functions, such as objectiveFunc() above.
 
     /// The model containing the attributes described in this class'
     /// description.
@@ -795,11 +787,8 @@ private:
     /// To record details of this run.
     mutable ofstream _optLog;
 
-    /// Individual terms of objective function.
-    mutable ofstream _objLog;
-
-    /// Period for how often objective terms are printed out to file.
-    static const int _objLogPeriod = 100;
+    /// Period for how often objective terms are printed to the log.
+    static const int _logPeriod = 100;
 
     /// The best (lowest) value of the objective function, for logging.
     mutable double _objectiveFcnValueBestYet;
