@@ -75,9 +75,6 @@ public:
             "Adds a term to the objective to minimize final difference "
             "between hunch and the specified hunch value, as well as the "
 			"related speeds");
-	OpenSim_DECLARE_PROPERTY(sagittal_symmetry_weight, double,
-            "Adds a term to the objective to minimize final value of "
-            "(hunch + 2 * pitch)");
 	OpenSim_DECLARE_PROPERTY(wag_value, double,
             "Final value for wag coordinate (radians)");
 	OpenSim_DECLARE_PROPERTY(wag_weight, double,
@@ -90,6 +87,9 @@ public:
             "Adds a term to the objective to minimize final difference "
             "between yaw and the specified yaw value, as well as the "
 			"related speeds");
+	OpenSim_DECLARE_PROPERTY(sagittal_symmetry_weight, double,
+            "Adds a term to the objective to minimize final value of "
+            "(hunch + 2 * pitch)");
     OpenSim_DECLARE_PROPERTY(legs_prepared_for_landing_weight, double,
             "Adds terms to the objective to minimize final value of "
             "frontLegs, backLegs, and related speeds");
@@ -162,11 +162,11 @@ public:
         constructProperty_posterior_legs_down_weight(1.0);
 		constructProperty_hunch_value(Pi/4);
 		constructProperty_hunch_weight(1.0);
-		constructProperty_sagittal_symmetry_weight(1.0);
 		constructProperty_wag_value(0.0);
 		constructProperty_wag_weight(1.0);
 		constructProperty_yaw_value(0.0);
 		constructProperty_yaw_weight(1.0);
+		constructProperty_sagittal_symmetry_weight(1.0);
         constructProperty_legs_prepared_for_landing_weight(1.0);
 		constructProperty_use_coordinate_limit_forces(true);
         constructProperty_relative_velaccel_weight(1.0);
@@ -443,9 +443,9 @@ public:
         f += anterior_legs_down_term(roll, rollRate, rollAccel);
         f += posterior_legs_down_term(twist, twistRate, twistAccel);
         f += hunch_term(hunch, hunchRate, hunchAccel);
-        f += sagittal_symmetry_term(hunch, pitch, pitchRate, pitchAccel);
         f += wag_term(wag, wagRate, wagAccel);
         f += yaw_term(yaw, yawRate, yawAccel);
+        f += sagittal_symmetry_term(hunch, pitch, pitchRate, pitchAccel);
         f += legs_prepared_for_landing_term(aState, coordinates);
         f += taskspace_terms(aState, coordinates);
         // ====================================================================
@@ -573,11 +573,8 @@ private:
     {
         if (_tool.get_anterior_legs_down_weight() != 0.0)
         {
-            double term = _tool.get_anterior_legs_down_weight() * (
+            return processObjTerm("anterior_legs_down", _tool.get_anterior_legs_down_weight(),
                     pow(roll - Pi, 2) + _relw * pow(rollRate, 2) + _relw * pow(rollAccel, 2));
-            if (_objectiveCalls % _logPeriod == 0)
-                _optLog << " anterior_legs_down " << term;
-            return term;
         }
         return 0.0;
     }
@@ -587,11 +584,8 @@ private:
     {
         if (_tool.get_posterior_legs_down_weight() != 0.0)
         {
-            double term = _tool.get_posterior_legs_down_weight() * (
+            return processObjTerm("posterior_legs_down", _tool.get_posterior_legs_down_weight(),
                     pow(twist - 0.0, 2) + _relw * pow(twistRate, 2) + _relw * pow(twistAccel, 2));
-            if (_objectiveCalls % _logPeriod == 0)
-                _optLog << " posterior_legs_down " << term;
-            return term;
         }
         return 0.0;
     }
@@ -602,25 +596,8 @@ private:
         if (_tool.get_hunch_weight() != 0.0)
         {
             double hunchGoal = _tool.get_hunch_value();
-            double term = _tool.get_hunch_weight() * (
+            return processObjTerm("hunch", _tool.get_hunch_weight(),
                     pow(hunch - hunchGoal, 2) + _relw * pow(hunchRate, 2) + _relw * pow(hunchAccel, 2));
-            if (_objectiveCalls % _logPeriod == 0)
-                _optLog << " hunch " << term;
-            return term;
-        }
-        return 0.0;
-    }
-
-    double sagittal_symmetry_term(
-            double hunch, double pitch, double pitchRate, double pitchAccel) const
-    {
-        if (_tool.get_sagittal_symmetry_weight() != 0.0)
-        {
-            double term = _tool.get_sagittal_symmetry_weight() * (
-                    pow(hunch + 2 * pitch, 2) + _relw * pow(pitchRate, 2) + _relw * pow(pitchAccel, 2));
-            if (_objectiveCalls % _logPeriod == 0)
-                _optLog << " sagittal_symmetry " << term;
-            return term;
         }
         return 0.0;
     }
@@ -631,11 +608,8 @@ private:
         if (_tool.get_wag_weight() != 0.0)
         {
             double wagGoal = _tool.get_wag_value();
-            double term = _tool.get_wag_weight() * (
+            return processObjTerm("wag", _tool.get_wag_weight(),
                     pow(wag - wagGoal, 2) + _relw * pow(wagRate, 2) + _relw * pow(wagAccel, 2));
-            if (_objectiveCalls % _logPeriod == 0)
-                _optLog << " wag " << term;
-            return term;
         }
         return 0.0;
     }
@@ -646,11 +620,19 @@ private:
         if (_tool.get_yaw_weight() != 0.0)
         {
             double yawGoal = _tool.get_yaw_value();
-            double term = _tool.get_yaw_weight() * (
+            return processObjTerm("yaw", _tool.get_yaw_weight(),
                     pow(yaw - yawGoal, 2) + _relw * pow(yawRate, 2) + _relw * pow(yawAccel, 2));
-            if (_objectiveCalls % _logPeriod == 0)
-                _optLog << " yaw " << term;
-            return term;
+        }
+        return 0.0;
+    }
+
+    double sagittal_symmetry_term(
+            double hunch, double pitch, double pitchRate, double pitchAccel) const
+    {
+        if (_tool.get_sagittal_symmetry_weight() != 0.0)
+        {
+            return processObjTerm("sagittal_symmetry", _tool.get_sagittal_symmetry_weight(),
+                    pow(hunch + 2 * pitch, 2) + _relw * pow(pitchRate, 2) + _relw * pow(pitchAccel, 2));
         }
         return 0.0;
     }
@@ -672,9 +654,7 @@ private:
                     pow(frontLegs, 2) + _relw * pow(frontLegsRate, 2) + _relw * pow(frontLegsAccel, 2));
             double termB = _tool.get_legs_prepared_for_landing_weight() * (
                     pow(backLegs, 2) + _relw * pow(backLegsRate, 2) + _relw * pow(backLegsAccel, 2));
-            if (_objectiveCalls % _logPeriod == 0)
-                _optLog << " legs_prepared_for_landing " << termA + termB;
-            return termA + termB;
+            return processObjTerm("legs_prepared_for_landing", 1.0, termA + termB);
         }
         return 0.0;
     }
@@ -712,11 +692,9 @@ private:
                     _tool.get_desired_anterior_feet_pos_from_pivot_point_in_ground();
 
                 // magnitude(diff)^2
-                double termA = _tool.get_taskspace_anterior_legs_down_weight() * (
+                toReturn += processObjTerm("taskspace_anterior_legs_down",
+                        _tool.get_taskspace_anterior_legs_down_weight(),
                         SimTK::dot(diff, diff));
-                if (_objectiveCalls % _logPeriod == 0)
-                    _optLog << " taskspace_anterior_legs_down " << termA;
-                toReturn += termA;
             }
 
             if (_tool.get_taskspace_posterior_legs_down_weight() != 0.0)
@@ -738,16 +716,20 @@ private:
                     _tool.get_desired_posterior_feet_pos_from_pivot_point_in_ground();
 
                 // magnitude(diff)^2
-                double termB = _tool.get_taskspace_posterior_legs_down_weight() * (
-                        SimTK::dot(diff, diff));
-                if (_objectiveCalls % _logPeriod == 0)
-                    _optLog << " taskspace_posterior_legs_down " << termB;
-                toReturn += termB;
-
+                toReturn += processObjTerm("taskspace_posterior_legs_down",
+                        _tool.get_taskspace_posterior_legs_down_weight(),
+                         SimTK::dot(diff, diff));
             }
             return toReturn;
         }
         return 0.0;
+    }
+
+    double processObjTerm(double name, double weight, double term) const
+    {
+        if (_objectiveCalls & _logPeriod == 0)
+            _optLog << " " << name << " " << weight * term;
+        return weight * term;
     }
 
     // Member variables
