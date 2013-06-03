@@ -22,6 +22,9 @@ int main(int argc, char * argv[])
     if (argc == 2)
     { // Correct number of inputs.
 
+        // Set-up
+        // --------------------------------------------------------------------
+
         // Parse inputs using our Tool class.
         std::string toolSetupFile = argv[1];
         OpenSim::FlippinFelinesOptimizerTool tool(toolSetupFile);
@@ -43,7 +46,8 @@ int main(int argc, char * argv[])
         // by our OptimizerSystem.
         SimTK::Vector initParameters = sys.initialParameters();
 
-        // And we're off!
+        // And we're off! Running the optimization
+        // --------------------------------------------------------------------
         try
         {
             double f = opt.optimize(initParameters);

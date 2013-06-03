@@ -186,7 +186,7 @@ public:
         _relw(_tool.get_relative_velaccel_weight())
     {
         // Parse inputs
-        // --------------------------------------------------------------------
+        // ====================================================================
         _name = _tool.get_results_directory();
         _cat = OpenSim::Model(_tool.get_model_filename());
 
@@ -210,8 +210,9 @@ public:
 
         _numOptimSplinePoints = _tool.get_num_optim_spline_points();
 
+
         // Prepare output
-        // --------------------------------------------------------------------
+        // ====================================================================
 
         // Create a directory for all the output files we'll create.
 		#if defined(_WIN32)
@@ -232,6 +233,10 @@ public:
         _optLog << ctime(&rawtime);
         _optLog << "Model file name: " << _tool.get_model_filename() << std::endl;
 
+
+        // Prepare the model to accept the optimizer's parameters
+        // ====================================================================
+
         // Compute the number of optimization parameters we'll have.
         _numActuators = _cat.getActuators().getSize();
         int numParameters = _numActuators * _numOptimSplinePoints;
@@ -251,7 +256,8 @@ public:
         // Add the PrescribedController to the model.
         _cat.addController(flipController);
 
-        // - Create SimmSpline's for each actuator.
+        // Create SimmSpline's for each actuator
+        // `````````````````````````````````````
         double indexToTimeInSeconds =
             _duration / (double)(_numOptimSplinePoints - 1);
         for (int i = 0; i < _numActuators; i++)
@@ -274,7 +280,8 @@ public:
             flipController->prescribeControlForActuator(i, _splines[i]);
         }
 
-        // Set (nondimensional) parameter limits.
+        // Set (nondimensional) parameter limits/bounds
+        // ====================================================================
         SimTK::Vector lowerLimits(getNumParameters(), -1.0);
         SimTK::Vector upperLimits(getNumParameters(), 1.0);
         setParameterLimits(lowerLimits, upperLimits);
@@ -292,6 +299,7 @@ public:
 
         if (_tool.get_initial_parameters_filename() != "")
         { // A file is specified.
+
             // Deserialize the specified XML file.
             OpenSim::FunctionSet initFcns(_tool.get_initial_parameters_filename());
 
@@ -340,10 +348,11 @@ public:
             bool new_parameters,
             SimTK::Real & f) const
     {
-        // Increment the number of calls to this function.
+        // Increment the count of calls to this function.
         _objectiveCalls++;
 
-        // - Unpack parameters into the model: update spline points.
+        // Unpack parameters into the model: update spline points
+        // ====================================================================
         for (int iAct = 0; iAct < _numActuators; iAct++)
         {
             // Max/min for all spline points for the i-th actuator.
@@ -372,7 +381,9 @@ public:
             }
         }
 
-        // --- Run a forward dynamics simulation.
+
+        // Run a forward dynamics simulation
+        // ====================================================================
         SimTK::State& initState = _cat.initSystem();
 
         // Construct an integrator.
@@ -391,7 +402,10 @@ public:
         manager.integrate(initState);
         // --------------------------------------------------------------------
 
-        // --- Construct the objective function value, term by term.
+
+        // Construct the objective function value, term by term
+        // ====================================================================
+
         // Will be writing to a log while constructing objective function val.
         if (_objectiveCalls % _outputPeriod == 0)
             _optLog << _objectiveCalls;
@@ -419,7 +433,7 @@ public:
 		double yawRate = coordinates.get("yaw").getSpeedValue(aState);
         double yawAccel = coordinates.get("yaw").getAccelerationValue(aState);
 
-        // ====================================================================
+        // --------------------------------------------------------------------
         f = 0;
         f += anteriorLegsDownTerm(roll, rollRate, rollAccel);
         f += posteriorLegsDownTerm(twist, twistRate, twistAccel);
@@ -429,9 +443,11 @@ public:
         f += sagittalSymmetryTerm(hunch, pitch, pitchRate, pitchAccel);
         f += legsPreparedForLandingTerm(aState, coordinates);
         f += taskspaceTerms(aState, coordinates);
-        // ====================================================================
+        // --------------------------------------------------------------------
 
-        // Update the log.
+
+        // Update the log and outputs based on this objective function value
+        // ====================================================================
         _lastCallWasBestYet = _thisCallIsBestYet;
         _thisCallIsBestYet = f <= _objectiveFcnValueBestYet;
         if (_thisCallIsBestYet) _objectiveFcnValueBestYet = f;
@@ -467,19 +483,21 @@ public:
         return 0;
     }
 
-    int getObjectiveCalls() const { return _objectiveCalls; }
-
-    /// @brief Prints the current model to the given file name.
-    /// The file will be located in the directory containing the log file
-    /// for this optimization run.
+    /**
+     * @brief Prints the current model to the given file name.  The file will
+     * be located in the directory containing the log file for this
+     * optimization run.
+     * */
     void printModel(std::string filename) const
     {
         _cat.print(_name + "/" + filename);
     }
 
-    /// @brief Serializes the current set of functions used for the actuators.
-    /// The file will be located in the directory containing the log file
-    /// for this optimization run.
+    /**
+     * @brief Serializes the current set of functions used for the actuators.
+     * The file will be located in the directory containing the log file
+     * for this optimization run.
+     * */
     void printPrescribedControllerFunctionSet(std::string filename) const
     {
         // Create the FunctionSet that we'll then serialize.
@@ -492,14 +510,16 @@ public:
         fset.print(_name + "/" + filename);
     }
 
-    /// @brief Serializes the set of functions associated with the best-yet
-    ///     value of the objective function.
-    /// The file will be located in the directory containing the log file
-    /// for this optimization run.
-    /// @param nondimensionalize Divide spline values by minControl for the
-    ///     actuator, if value and minControl are negative, and by maxControl,
-    ///     if value is positive. If nondimensionalized, this FunctionSet can
-    ///     be used as initial parameters.
+    /**
+     * @brief Serializes the set of functions associated with the best-yet
+     *     value of the objective function.
+     * The file will be located in the directory containing the log file
+     * for this optimization run.
+     * @param nondimensionalize Divide spline values by minControl for the
+     *     actuator, if value and minControl are negative, and by maxControl,
+     *     if value is positive. If nondimensionalized, this FunctionSet can
+     *     be used as initial parameters.
+     * */
     void printBestYetPrescribedControllerFunctionSet(std::string filename,
             bool nondimensionalize=false) const
     {
@@ -543,6 +563,15 @@ private:
 
     // Objective function terms
     // ========================================================================
+
+    // Helper for the member functions above.
+    double processObjTerm(std::string name, double weight, double term) const
+    {
+        if (_objectiveCalls % _outputPeriod == 0)
+            _optLog << " " << name << " " << weight * term;
+        return weight * term;
+    }
+
     // These functions must be 'const' because objectiveFunc() is const; cannot
     // call member functions within a const member function unless those
     // functions are also const.
@@ -706,13 +735,6 @@ private:
             return toReturn;
         }
         return 0.0;
-    }
-
-    double processObjTerm(std::string name, double weight, double term) const
-    {
-        if (_objectiveCalls % _outputPeriod == 0)
-            _optLog << " " << name << " " << weight * term;
-        return weight * term;
     }
 
     // Member variables
