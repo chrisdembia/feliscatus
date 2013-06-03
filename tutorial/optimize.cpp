@@ -79,7 +79,7 @@ int main(int argc, char * argv[])
         std::cout << "\nIncorrect input provided. "
             "Must specify the name of a FlippinFelinesOptimizerTool "
             "serialization (setup/input file).\n\nExamples:\n\t"
-            "optimize feliscatusoptimizertool_template.xml\n" << endl;
+            "optimize feliscatusoptimizertool_template.xml\n" << std::endl;
         return 0;
     }
 
