@@ -5,53 +5,46 @@
 
 #include "FlippinFelinesOptimizerSystem.h"
 
-using std::cout;
-using std::endl;
-using std::string;
-
-using SimTK::Optimizer;
-
-using OpenSim::FelisCatusOptimizerTool;
-
 /**
- * Creates a FelisCatusOptimizerSystem and then optimizes it. Prints out an
+ * Creates a FlippinFelinesOptimizerSystem and then optimizes it. Prints out an
  * osim file of the cat model (with controls) that results from the
  * optimization, as well as an XML file containing all the splines used for
  * controls.
  * */
 int main(int argc, char * argv[])
 {
-    // Get the filename of the FelisCatusOptimizerTool serialization.
+    // Get the filename of the FlippinFelinesOptimizerTool serialization.
     // argc is the number of command line inputs, INCLUDING the name of the
     //      exectuable as well. Thus, it'll always be greater than/equal to 1.
     // argv is an array of space-delimited command line inputs, the first one
     //      necessarily being the name of the executable.
-    string help = "Must specify the name of a FelisCatusOptimizerTool "
-                  "serialization (setup/input file).\n\nExamples:\n\t"
-                  "optimize feliscatusoptimizertool_template.xml\n";
+    std::string help = "Must specify the name of a FlippinFelinesOptimizerTool "
+        "serialization (setup/input file).\n\nExamples:\n\t"
+        "optimize feliscatusoptimizertool_template.xml\n";
 
     if (argc == 2)
     { // Correct number of inputs.
 
         // Parse inputs using the Tool class.
-        string toolSetupFile = argv[1];
-        FelisCatusOptimizerTool tool(toolSetupFile);
-        string name = tool.get_results_directory();
+        std::string toolSetupFile = argv[1];
+        OpenSim::FlippinFelinesOptimizerTool tool(toolSetupFile);
+        std::string name = tool.get_results_directory();
 
         // Use inputs to create the optimizer system.
-        FelisCatusOptimizerSystem sys(tool);
+        FlippinFelinesOptimizerSystem sys(tool);
 
         // Create the optimizer with our system.
-        Optimizer opt(sys, SimTK::BestAvailable);
+        SimTK::Optimizer opt(sys, SimTK::BestAvailable);
 
+        // Set optimizer settings.
         opt.setConvergenceTolerance(0.001);
-		opt.setDiagnosticsLevel(1);
         opt.useNumericalGradient(true);
         opt.setMaxIterations(100000);
         opt.setLimitedMemoryHistory(500);
 
-        // Initialize parameters for the optimization to be zero.
-        Vector initParameters = sys.initialParameters();
+        // Initialize parameters for the optimization as those determined
+        // by our OptimizerSystem.
+        SimTK::Vector initParameters = sys.initialParameters();
 
         // And we're off!
         try
@@ -65,7 +58,7 @@ int main(int argc, char * argv[])
             sys.printPrescribedControllerFunctionSet(
                     name + "_optimized_parameters.xml");
 
-            cout << "Done with " << name << "! f = " << f << endl;
+            std::cout << "Done with " << name << "! f = " << f << std::endl;
         }
         catch (...)
         {
@@ -74,7 +67,7 @@ int main(int argc, char * argv[])
             sys.printPrescribedControllerFunctionSet(
                     name + "_last_parameters.xml");
 
-            cout << "Exception thrown; optimization not achieved." << endl;
+            std::cout << "Exception thrown; optimization not achieved." << std::endl;
 
             // Don't want to give the appearance of normal operation.
             throw;
@@ -82,7 +75,7 @@ int main(int argc, char * argv[])
     }
     else
     { // Too few/many inputs, etc.
-        cout << "\nIncorrect input provided. " << help << endl;
+        std::cout << "\nIncorrect input provided. " << help << std::endl;
         return 0;
     }
 
