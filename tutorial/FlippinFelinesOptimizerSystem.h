@@ -156,7 +156,7 @@ public:
     void constructProperties()
     {
         constructProperty_results_directory("results");
-        constructProperty_model_filename("feliscatus_*FILL THIS IN*.osim");
+        constructProperty_model_filename("feliscatus_<FILL_THIS_IN>.osim");
         constructProperty_num_optim_spline_points(20);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
@@ -205,7 +205,8 @@ public:
         _objectiveCalls(0),
         _objectiveFcnValueBestYet(SimTK::Infinity),
         _anteriorFeetPosFromPivotPointInAnterior(Vec3(-1, 1, 0)),
-        _posteriorFeetPosFromPivotPointInPosterior(Vec3(1, 1, 0))
+        _posteriorFeetPosFromPivotPointInPosterior(Vec3(1, 1, 0)),
+        _relw(_tool.get_relative_velaccel_weight())
     {
         // Parse inputs.
         _name = _tool.get_results_directory();
@@ -426,156 +427,29 @@ public:
         double twist = coordinates.get("twist").getValue(aState);
         double twistRate = coordinates.get("twist").getSpeedValue(aState);
         double twistAccel = coordinates.get("twist").getAccelerationValue(aState);
-		double hunchGoal = _tool.get_hunch_value();
 		double hunch = coordinates.get("hunch").getValue(aState);
 		double hunchRate = coordinates.get("hunch").getSpeedValue(aState);
         double hunchAccel = coordinates.get("hunch").getAccelerationValue(aState);
 		double pitch = coordinates.get("pitch").getValue(aState);
 		double pitchRate = coordinates.get("pitch").getSpeedValue(aState);
         double pitchAccel = coordinates.get("pitch").getAccelerationValue(aState);
-		double wagGoal = _tool.get_wag_value();
 		double wag = coordinates.get("wag").getValue(aState);
 		double wagRate = coordinates.get("wag").getSpeedValue(aState);
         double wagAccel = coordinates.get("wag").getAccelerationValue(aState);
-		double yawGoal = _tool.get_yaw_value();
 		double yaw = coordinates.get("yaw").getValue(aState);
 		double yawRate = coordinates.get("yaw").getSpeedValue(aState);
         double yawAccel = coordinates.get("yaw").getAccelerationValue(aState);
 
-        // Relative weighting of velocity/acceleration terms.
-        double relw = _tool.get_relative_velaccel_weight();
         // ====================================================================
         f = 0;
-        if (_tool.get_anterior_legs_down_weight() != 0.0)
-        {
-            double term = _tool.get_anterior_legs_down_weight() * (
-                pow(roll - Pi, 2) + relw * pow(rollRate, 2) + relw * pow(rollAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " anterior_legs_down " << term;
-            f += term;
-        }
-        if (_tool.get_posterior_legs_down_weight() != 0.0)
-        {
-            double term = _tool.get_posterior_legs_down_weight() * (
-                pow(twist - 0.0, 2) + relw * pow(twistRate, 2) + relw * pow(twistAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " posterior_legs_down " << term;
-            f += term;
-        }
-		if (_tool.get_hunch_weight() != 0.0)
-        {
-            double term = _tool.get_hunch_weight() * (
-				pow(hunch - hunchGoal, 2) + relw * pow(hunchRate, 2) + relw * pow(hunchAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " hunch " << term;
-            f += term;
-        }
-		if (_tool.get_sagittal_symmetry_weight() != 0.0)
-        {
-            double term = _tool.get_sagittal_symmetry_weight() * (
-				pow(hunch + 2 * pitch, 2) + relw * pow(pitchRate, 2) + relw * pow(pitchAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " sagittal_symmetry " << term;
-            f += term;
-        }
-		if (_tool.get_wag_weight() != 0.0)
-        {
-            double term = _tool.get_wag_weight() * (
-				pow(wag - wagGoal, 2) + relw * pow(wagRate, 2) + relw * pow(wagAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " wag " << term;
-            f += term;
-        }
-		if (_tool.get_yaw_weight() != 0.0)
-        {
-            double term = _tool.get_yaw_weight() * (
-				pow(yaw - yawGoal, 2) + relw * pow(yawRate, 2) + relw * pow(yawAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " yaw " << term;
-            f += term;
-        }
-        if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
-        {
-            // These values may not be available for all models.
-            double frontLegs = coordinates.get("frontLegs").getValue(aState);
-            double frontLegsRate = coordinates.get("frontLegs").getSpeedValue(aState);
-            double frontLegsAccel = coordinates.get("frontLegs").getAccelerationValue(aState);
-            double backLegs = coordinates.get("backLegs").getValue(aState);
-            double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
-            double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
-            
-			double termA = _tool.get_legs_prepared_for_landing_weight() * (
-                pow(frontLegs, 2) + relw * pow(frontLegsRate, 2) + relw * pow(frontLegsAccel, 2));
-            double termB = _tool.get_legs_prepared_for_landing_weight() * (
-                pow(backLegs, 2) + relw * pow(backLegsRate, 2) + relw * pow(backLegsAccel, 2));
-            if (_objectiveCalls % _objLogPeriod == 0)
-                _objLog << " legs_prepared_for_landing " << termA + termB;
-            f += termA + termB;
-        }
-        if (_tool.get_taskspace_anterior_legs_down_weight() != 0.0 ||
-            _tool.get_taskspace_posterior_legs_down_weight() != 0.0)
-        { // Task-space flip conditions.
-
-            // Construct the position of the pivot point.
-            double tx = coordinates.get("tx").getValue(aState);
-            double ty = coordinates.get("ty").getValue(aState);
-            double tz = coordinates.get("tz").getValue(aState);
-            Vec3 pivotPointPosFromGroundPointInGround(tx, ty, tz);
-            
-            if (_tool.get_taskspace_anterior_legs_down_weight() != 0)
-            {
-                // All vectors instantiated in this scope are expressed
-                // in ground frame.
-                Vec3 anteriorFeetPosFromGroundPointInGround;
-                _cat.getSimbodyEngine().transformPosition(aState, 
-                    _cat.getBodySet().get("anteriorBody"),
-                    _anteriorFeetPosFromPivotPointInAnterior,
-                    _cat.getGroundBody(),
-                    anteriorFeetPosFromGroundPointInGround);
-
-                Vec3 anteriorFeetPosFromPivotPointInGround = 
-                    anteriorFeetPosFromGroundPointInGround -
-                    pivotPointPosFromGroundPointInGround;
-
-                Vec3 diff = anteriorFeetPosFromPivotPointInGround -
-                    _tool.get_desired_anterior_feet_pos_from_pivot_point_in_ground();
-
-                // magnitude(diff)^2
-                double term = _tool.get_taskspace_anterior_legs_down_weight() * (
-                    SimTK::dot(diff, diff));
-                if (_objectiveCalls % _objLogPeriod == 0)
-                    _objLog << " taskspace_anterior_legs_down " << term;
-                f += term;
-            }
-
-            if (_tool.get_taskspace_posterior_legs_down_weight() != 0.0)
-            {
-                // All vectors instantiated in this scope are expressed
-                // in ground frame.
-                Vec3 posteriorFeetPosFromGroundPointInGround;
-                _cat.getSimbodyEngine().transformPosition(aState,
-                    _cat.getBodySet().get("posteriorBody"),
-                    _posteriorFeetPosFromPivotPointInPosterior,
-                    _cat.getGroundBody(),
-                    posteriorFeetPosFromGroundPointInGround);
-
-                Vec3 posteriorFeetPosFromPivotPointInGround =
-                    posteriorFeetPosFromGroundPointInGround -
-                    pivotPointPosFromGroundPointInGround;
-
-                Vec3 diff = posteriorFeetPosFromPivotPointInGround -
-                    _tool.get_desired_posterior_feet_pos_from_pivot_point_in_ground();
-
-                // magnitude(diff)^2
-                double term = _tool.get_taskspace_posterior_legs_down_weight() * (
-                    SimTK::dot(diff, diff));
-                if (_objectiveCalls % _objLogPeriod == 0)
-                    _objLog << " taskspace_posterior_legs_down " << term;
-                f += term;
-
-            }
-        }
-
+        f += anterior_legs_down_term(roll, rollRate, rollAccel);
+        f += posterior_legs_down_term(twist, twistRate, twistAccel);
+        f += hunch_term(hunch, hunchRate, hunchAccel);
+        f += sagittal_symmetry_term(hunch, pitch, pitchRate, pitchAccel);
+        f += wag_term(wag, wagRate, wagAccel);
+        f += yaw_term(yaw, yawRate, yawAccel);
+        f += legs_prepared_for_landing_term(aState, coordinates);
+        f += taskspace_terms(aState, coordinates);
         // ====================================================================
 
         // Update the log.
@@ -695,6 +569,198 @@ public:
 
 private:
 
+    // Objective function terms
+    // ========================================================================
+    // These functions must be 'const' because objectiveFunc() is const; cannot
+    // call member functions within a const member function unless those
+    // functions are also const.
+
+    // These functions are also defined inline (definition is inside the class
+    // definition) for efficiency: the compiler will 'paste' the function body
+    // into the place where the function is called.
+
+    double anterior_legs_down_term(
+            double roll, double rollRate, double rollAccel) const
+    {
+        if (_tool.get_anterior_legs_down_weight() != 0.0)
+        {
+            double term = _tool.get_anterior_legs_down_weight() * (
+                    pow(roll - Pi, 2) + _relw * pow(rollRate, 2) + _relw * pow(rollAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " anterior_legs_down " << term;
+            return term;
+        }
+        return 0.0;
+    }
+
+    double posterior_legs_down_term(
+            double twist, double twistRate, double twistAccel) const
+    {
+        if (_tool.get_posterior_legs_down_weight() != 0.0)
+        {
+            double term = _tool.get_posterior_legs_down_weight() * (
+                    pow(twist - 0.0, 2) + _relw * pow(twistRate, 2) + _relw * pow(twistAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " posterior_legs_down " << term;
+            return term;
+        }
+        return 0.0;
+    }
+
+    double hunch_term(
+            double hunch, double hunchRate, double hunchAccel) const
+    {
+        if (_tool.get_hunch_weight() != 0.0)
+        {
+            double hunchGoal = _tool.get_hunch_value();
+            double term = _tool.get_hunch_weight() * (
+                    pow(hunch - hunchGoal, 2) + _relw * pow(hunchRate, 2) + _relw * pow(hunchAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " hunch " << term;
+            return term;
+        }
+        return 0.0;
+    }
+
+    double sagittal_symmetry_term(
+            double hunch, double pitch, double pitchRate, double pitchAccel) const
+    {
+        if (_tool.get_sagittal_symmetry_weight() != 0.0)
+        {
+            double term = _tool.get_sagittal_symmetry_weight() * (
+                    pow(hunch + 2 * pitch, 2) + _relw * pow(pitchRate, 2) + _relw * pow(pitchAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " sagittal_symmetry " << term;
+            return term;
+        }
+        return 0.0;
+    }
+
+    double wag_term(
+            double wag, double wagRate, double wagAccel) const
+    {
+        if (_tool.get_wag_weight() != 0.0)
+        {
+            double wagGoal = _tool.get_wag_value();
+            double term = _tool.get_wag_weight() * (
+                    pow(wag - wagGoal, 2) + _relw * pow(wagRate, 2) + _relw * pow(wagAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " wag " << term;
+            return term;
+        }
+        return 0.0;
+    }
+
+    double yaw_term(
+            double yaw, double yawRate, double yawAccel) const
+    {
+        if (_tool.get_yaw_weight() != 0.0)
+        {
+            double yawGoal = _tool.get_yaw_value();
+            double term = _tool.get_yaw_weight() * (
+                    pow(yaw - yawGoal, 2) + _relw * pow(yawRate, 2) + _relw * pow(yawAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " yaw " << term;
+            return term;
+        }
+        return 0.0;
+    }
+
+    double legs_prepared_for_landing_term(
+            State aState, const CoordinateSet & coordinates) const
+    {
+        if (_tool.get_legs_prepared_for_landing_weight() != 0.0)
+        {
+            // These values may not be available for all models.
+            double frontLegs = coordinates.get("frontLegs").getValue(aState);
+            double frontLegsRate = coordinates.get("frontLegs").getSpeedValue(aState);
+            double frontLegsAccel = coordinates.get("frontLegs").getAccelerationValue(aState);
+            double backLegs = coordinates.get("backLegs").getValue(aState);
+            double backLegsRate = coordinates.get("backLegs").getSpeedValue(aState);
+            double backLegsAccel = coordinates.get("backLegs").getAccelerationValue(aState);
+
+            double termA = _tool.get_legs_prepared_for_landing_weight() * (
+                    pow(frontLegs, 2) + _relw * pow(frontLegsRate, 2) + _relw * pow(frontLegsAccel, 2));
+            double termB = _tool.get_legs_prepared_for_landing_weight() * (
+                    pow(backLegs, 2) + _relw * pow(backLegsRate, 2) + _relw * pow(backLegsAccel, 2));
+            if (_objectiveCalls % _objLogPeriod == 0)
+                _objLog << " legs_prepared_for_landing " << termA + termB;
+            return termA + termB;
+        }
+        return 0.0;
+    }
+
+    double taskspace_terms(State aState, const CoordinateSet & coordinates) const
+    {
+        if (_tool.get_taskspace_anterior_legs_down_weight() != 0.0 ||
+                _tool.get_taskspace_posterior_legs_down_weight() != 0.0)
+        { // Task-space flip conditions.
+
+            double toReturn = 0.0;
+
+            // Construct the position of the pivot point.
+            double tx = coordinates.get("tx").getValue(aState);
+            double ty = coordinates.get("ty").getValue(aState);
+            double tz = coordinates.get("tz").getValue(aState);
+            Vec3 pivotPointPosFromGroundPointInGround(tx, ty, tz);
+
+            if (_tool.get_taskspace_anterior_legs_down_weight() != 0)
+            {
+                // All vectors instantiated in this scope are expressed
+                // in ground frame.
+                Vec3 anteriorFeetPosFromGroundPointInGround;
+                _cat.getSimbodyEngine().transformPosition(aState, 
+                        _cat.getBodySet().get("anteriorBody"),
+                        _anteriorFeetPosFromPivotPointInAnterior,
+                        _cat.getGroundBody(),
+                        anteriorFeetPosFromGroundPointInGround);
+
+                Vec3 anteriorFeetPosFromPivotPointInGround = 
+                    anteriorFeetPosFromGroundPointInGround -
+                    pivotPointPosFromGroundPointInGround;
+
+                Vec3 diff = anteriorFeetPosFromPivotPointInGround -
+                    _tool.get_desired_anterior_feet_pos_from_pivot_point_in_ground();
+
+                // magnitude(diff)^2
+                double termA = _tool.get_taskspace_anterior_legs_down_weight() * (
+                        SimTK::dot(diff, diff));
+                if (_objectiveCalls % _objLogPeriod == 0)
+                    _objLog << " taskspace_anterior_legs_down " << termA;
+                toReturn += termA;
+            }
+
+            if (_tool.get_taskspace_posterior_legs_down_weight() != 0.0)
+            {
+                // All vectors instantiated in this scope are expressed
+                // in ground frame.
+                Vec3 posteriorFeetPosFromGroundPointInGround;
+                _cat.getSimbodyEngine().transformPosition(aState,
+                        _cat.getBodySet().get("posteriorBody"),
+                        _posteriorFeetPosFromPivotPointInPosterior,
+                        _cat.getGroundBody(),
+                        posteriorFeetPosFromGroundPointInGround);
+
+                Vec3 posteriorFeetPosFromPivotPointInGround =
+                    posteriorFeetPosFromGroundPointInGround -
+                    pivotPointPosFromGroundPointInGround;
+
+                Vec3 diff = posteriorFeetPosFromPivotPointInGround -
+                    _tool.get_desired_posterior_feet_pos_from_pivot_point_in_ground();
+
+                // magnitude(diff)^2
+                double termB = _tool.get_taskspace_posterior_legs_down_weight() * (
+                        SimTK::dot(diff, diff));
+                if (_objectiveCalls % _objLogPeriod == 0)
+                    _objLog << " taskspace_posterior_legs_down " << termB;
+                toReturn += termB;
+
+            }
+            return toReturn;
+        }
+        return 0.0;
+    }
+
     /// See constructor.
     string _name;
 
@@ -742,9 +808,13 @@ private:
     mutable bool _lastCallWasBestYet;
     mutable bool _thisCallIsBestYet;
 
-    // For task-space objectives.
+    /// For task-space objectives.
     Vec3 _anteriorFeetPosFromPivotPointInAnterior;
+    /// For task-space objectives.
     Vec3 _posteriorFeetPosFromPivotPointInPosterior;
+
+    /// Relative weighting of velocity/acceleration terms.
+    double _relw;
 
 };
 
