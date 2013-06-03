@@ -259,10 +259,10 @@ int main(int argc, char *argv[])
 
     // Actuation
     // ------------------------------------------------------------------------
-    // Since all coordinates are angles, the actuators are effectively torque
-    // actuators. The reason to use a CoordinateActuator instead of a
-    // TorqueActuator is that we needn't specify the axis of the actuation, or
-    // the bodies on which it acts.
+    // Since the coordinates between the segments are angles, the actuators are
+    // effectively torque actuators. The reason to use a CoordinateActuator
+    // instead of a TorqueActuator is that for a CoordinateActuator we needn't
+    // specify the axis of the actuation, or the bodies on which it acts.
     using OpenSim::CoordinateActuator;
 
     // hunch
