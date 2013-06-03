@@ -1,236 +1,119 @@
 
 #include "FelisCatusModeling.h"
 
-using OpenSim::CoordinateActuator;
-using OpenSim::CoordinateLimitForce;
-using OpenSim::CustomJoint;
-using OpenSim::PinJoint;
-using OpenSim::SpatialTransform;
-using OpenSim::WeldJoint;
-
-/**
- * This class allows for the creation of a "tree" of cat models, starting with
- * a "zero- degree-of-freedom" (DOF) base case and adding complexity (i.e.,
- * DOFs) iteratively. Each cat model consists of two cylindrical
- * segments connected by a three-DOF (back flexion or 'hunch', spinal
- * twist, and side bending or 'wag') joint. Each model restricts the
- * DOFs of this joint to a different degree. In addition, some models
- * includes legs; some are rigid and normal to the cat's underside, while
- * others are "retractable," allowing the cat to change the effective
- * moment of inertia of its two halves. Any of these models can be used in
- * input to the 'optimize' executable, though it may be necessary to set some
- * of the objective weights to 0 depending on the model used (i.e., can't use
- * an objective that depends on legs if the model does not have legs).
- * */
-class FelisCatusDembiaSketch : public FelisCatusModeling
-{
-public:
-
-	enum LegsType {NoLegs, Rigid, RetractBack, Retract};
-
-    enum TailType {NoTail, FixedPerch, FreePerch};
-
-    FelisCatusDembiaSketch();
-        
-    void makeModel(string modelName, bool canTwist, bool canHunch, bool canWag,
-            LegsType whichLegs, TailType whichTail);
-
-protected:
-
-    // Member functions to allow for stepwise model extensions beyond the base
-    // model by unlocking coordinates, adding bodies, etc.
-
-	// NOTE: each 'add' function takes care of actuators if necessary
-
-	void addBaseJointsAndBodies();
-    void addTwist();
-	void addHunch();
-	void addWag();
-    void createLegBodies();
-    void addLegsDisplayGeometry();
-	void addRigidLegs();
-	void addRetractLegs(bool frontLegsRetract=true);
-    void addTail(TailType whichTail);
-
-    /**
-     * Adds a coordinate actuator to the model for the given coordinate name.
-     * The min and max control are set from the _maxTorque member variable.
-     * */
-    void addCoordinateActuator(string coordinateName);
-
-	double _legsLength;
-    double _legsDiam;
-	double _legsWidth;
-    double _legsMass;
-
-	static const int _maxTorque = 40; // N-m
-
-	Body * _anteriorLegs;
-	Body * _posteriorLegs;
-};
-
 int main(int argc, char *argv[])
 {
-    vector<bool> bothOptions;
-    bothOptions.push_back(false);
-    bothOptions.push_back(true);
+    // A model that exhibits the counter-rotation mechanism of flipping
+    // ========================================================================
 
-    vector<bool> canTwist = bothOptions;
-    vector<bool> canHunch = bothOptions;
-    vector<bool> canWag = bothOptions;
+    // Properties
+    // ------------------------------------------------------------------------
+    double segmentalLength = 0.175;		                   // m
+    double segmentalDiam = 0.15;			               // m
+    double segmentalMass = 1;				               // kg
+    double segmentalTransverseMomentOfInertia = 1;         // kg-m^2
+    // For actuators:
+	double maxTorque = 40.0;                               // N-m
 
-    vector<FelisCatusDembiaSketch::LegsType> whichLegs;
-    whichLegs.push_back(FelisCatusDembiaSketch::NoLegs);
-    whichLegs.push_back(FelisCatusDembiaSketch::Rigid);
-    whichLegs.push_back(FelisCatusDembiaSketch::RetractBack);
-    whichLegs.push_back(FelisCatusDembiaSketch::Retract);
+    // Ratio of transverse to axial moment of inertia:
+    double JIratio = 0.25; // from Kane and Scher (1969)
 
-    vector<FelisCatusDembiaSketch::TailType> whichTail;
-    whichTail.push_back(FelisCatusDembiaSketch::NoTail);
-    whichTail.push_back(FelisCatusDembiaSketch::FixedPerch);
-    whichTail.push_back(FelisCatusDembiaSketch::FreePerch);
 
-    for (unsigned int it = 0; it < canTwist.size(); it++)
-    {
-        for (unsigned int ih = 0; ih < canHunch.size(); ih++)
-        {
-            for (unsigned int iw = 0; iw < canWag.size(); iw++)
-            {
-                for (int iL = 0; iL < whichLegs.size(); iL++)
-                {
-                    for (int iT = 0; iT < whichTail.size(); iT++)
-                    {
-                        string modifier;
-                        modifier += canTwist[it] ? "Twist" : "";
-                        modifier += canHunch[ih] ? "Hunch" : "";
-                        modifier += canWag[iw] ? "Wag" : "";
+    // Basics
+    // ------------------------------------------------------------------------
+    // Create the cat model.
+    OpenSim::Model cat;
 
-                        switch (whichLegs[iL])
-                        {
-                            case FelisCatusDembiaSketch::Rigid:
-                                modifier += "RigidLegs"; break;
-                            case FelisCatusDembiaSketch::RetractBack:
-                                modifier += "RetractBackLeg"; break;
-                            case FelisCatusDembiaSketch::Retract:
-                                modifier += "RetractLegs"; break;
-                        }
-                        switch (whichTail[iT])
-                        {
-                            case FelisCatusDembiaSketch::FixedPerch:
-                                modifier += "FixedPerchTail"; break;
-                            case FelisCatusDembiaSketch::FreePerch:
-                                modifier += "FreePerchTail"; break;
-                        }
+    // Name the cat after the founder of Stanford University.
+    // This model will be able to hunch and wag (see the joints below).
+    cat.setName("Leland_hunch_wag");
 
-                        // Only prepend underscore if this is not the zero-DOF
-                        // model.
-                        if (modifier != "") modifier = "_" + modifier;
+    // 'Turn off' gravity so it's easier to watch an animation of the flip.
+    cat.setGravity(Vec3(0, 0, 0));
 
-                        FelisCatusDembiaSketch m;
-                        m.makeModel("Leland" + modifier,
-                                canTwist[it], canHunch[ih], canWag[iw],
-                                whichLegs[iL], whichTail[iT]);
-                        m.printModel("feliscatus" + modifier + ".osim");
-                    }
-                }
-            }
-        }
-    }
 
-    return EXIT_SUCCESS;
-};
+    // Anterior and posterior halves of the cat
+    // ------------------------------------------------------------------------
+    // Prepare inertia properties for the 2 primary segments of the cat.
+    double segmentalAxialMoment = JIratio * segmentalTransverseMomentOfInertia;
+    double Ixx = segmentalAxialMoment;
+    double Iyy = segmentalTransverseMomentOfInertia;
+    double Izz = segmentalTransverseMomentOfInertia;
+    double Ixy = 0;
+    double Ixz = 0;
+    double Iyz = 0;
+    Inertia segmentalInertia = OpenSim::Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
 
-FelisCatusDembiaSketch::FelisCatusDembiaSketch()
-{
-    _legsLength = 0.125;				     // m
-    _legsDiam = 0.1 * _legsLength;	         // m
-    // Sum of both legs (60% distance across the belly):
-    _legsWidth = 0.6 * _segmentalDiam;       // m
-    _legsMass = 0.2;					     // kg
-}
+    // Anterior half of cat.
+    Body * anteriorBody = new OpenSim::Body();
+    anteriorBody->setName("anteriorBody");
+    anteriorBody->setMass(segmentalMass);
+    // By choosing the following as the mass center, we choose the origin of
+    // the anteriorBody frame to be at its positive-X extent. That is, the
+    // anterior body sits to the -X direction from its origin.
+    anteriorBody->setMassCenter(Vec3(-0.5 * segmentalLength, 0, 0));
+    anteriorBody->setInertia(segmentalInertia);
 
-void FelisCatusDembiaSketch::makeModel(string modelName,
-        bool canTwist, bool canHunch, bool canWag,
-        LegsType whichLegs, TailType whichTail)
-{
-    // Call the superclass's method to create base bodies, etc.
-    FelisCatusModeling::makeModel(modelName);
+    // Posterior half of cat; same mass properties as anterior half.
+    Body * posteriorBody = new OpenSim::Body();
+    posteriorBody->setName("posteriorBody");
+    posteriorBody->setMass(segmentalMass);
+    // Posterior body sits to the +X direction from its origin.
+    posteriorBody->setMassCenter(Vec3(0.5 * segmentalLength, 0, 0));
+    posteriorBody->setInertia(segmentalInertia);
 
-    // -- Unlocking intersegment DOF's.
 
-    if (canTwist) {
-		addTwist();
-	}
-
-	if (canHunch) {
-		addHunch();
-	}
-
-	if (canWag) {
-		addWag();
-	}
-
-    // -- Adding additional bodies.
-    if (whichLegs != NoLegs)
-    {
-        createLegBodies();
-
-        if (whichLegs == Rigid) {
-            addRigidLegs();
-        } else if (whichLegs == RetractBack) {
-            addRetractLegs(false);
-        } else if (whichLegs == Retract) {
-            addRetractLegs();
-        }
-
-        addLegsDisplayGeometry();
-    }
-
-    if (whichTail != NoTail) {
-        addTail(whichTail);
-    }
-}
-
-void FelisCatusDembiaSketch::addBaseJointsAndBodies()
-{
-    // Called by Super::makeModel().
-
+    // Joints
+    // ------------------------------------------------------------------------
     Body & ground = _cat.getGroundBody();
 
-    // Connecting the anterior body to the ground via a custom joint. 
+    // Anterior body to the ground via a CustomJoint
+    // `````````````````````````````````````````````
 	// Rotation is defined via YZX Euler angles, named yaw, pitch, and
 	// roll respectively. The important translation is in Y, the direction
-	// of gravity.	
+	// of gravity.
 	Vec3 locGAInGround(0);
     Vec3 orientGAInGround(0);
     Vec3 locGAInAnterior(0);
     Vec3 orientGAInAnterior(0);
 
+    // To pass to the CustomJoint,farther down, a SpatialTransform:
+    // The SpatialTransfrom has 6 transform axes. The first 3 are rotations,
+    // defined about the axes of our choosing. The remaining 3 are translations,
+    // which we choose to be along the X, Y, and Z directions of the ground's
+    // frame.
 	SpatialTransform groundAnteriorST;
-	groundAnteriorST.updTransformAxis(0).setCoordinateNames(
+    groundAnteriorST.updTransformAxis(0).setCoordinateNames(
             Array<string>("yaw", 1));
     groundAnteriorST.updTransformAxis(0).setAxis(Vec3(0, 1, 0));
+
     groundAnteriorST.updTransformAxis(1).setCoordinateNames(
             Array<string>("pitch", 1));
     groundAnteriorST.updTransformAxis(1).setAxis(Vec3(0, 0, 1));
+
     groundAnteriorST.updTransformAxis(2).setCoordinateNames(
             Array<string>("roll", 1));
     groundAnteriorST.updTransformAxis(2).setAxis(Vec3(1, 0, 0));
+
     groundAnteriorST.updTransformAxis(3).setCoordinateNames(
             Array<string>("tx", 1));
     groundAnteriorST.updTransformAxis(3).setAxis(Vec3(1, 0, 0));
+
     groundAnteriorST.updTransformAxis(4).setCoordinateNames(
             Array<string>("ty", 1));
     groundAnteriorST.updTransformAxis(4).setAxis(Vec3(0, 1, 0));
+
     groundAnteriorST.updTransformAxis(5).setCoordinateNames(
             Array<string>("tz", 1));
     groundAnteriorST.updTransformAxis(5).setAxis(Vec3(0, 0, 1));
 
     CustomJoint * groundAnterior = new CustomJoint("ground_anterior",
             ground, locGAInGround, orientGAInGround,
-            *_anteriorBody, locGAInAnterior, orientGAInAnterior,
+            *anteriorBody, locGAInAnterior, orientGAInAnterior,
             groundAnteriorST);
 
+    // Edit the Coordinate's created by the CustomJoint. The 6 coordinates
+    // correspond to the TransformAxis's we set above.
     CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
     // yaw
     double groundAnteriorCS0range[2] = {-Pi, Pi};
@@ -263,9 +146,9 @@ void FelisCatusDembiaSketch::addBaseJointsAndBodies()
     groundAnteriorCS[5].setDefaultValue(0);
     groundAnteriorCS[5].setDefaultLocked(false);
 
-    // Connecting the anterior and posterior bodies via a custom joint. 
-	// Rotation is defined via ZYX Euler angles, named hunch, wag, and
-	// twist respectively.
+    // Anterior to posterior body via a CustomJoint
+    // ````````````````````````````````````````````
+	// Rotation is defined via ZYX Euler angles.
     Vec3 locAPInAnterior(0);
     Vec3 orientAPInAnterior(0);
     Vec3 locAPInPosterior(0);
@@ -275,290 +158,140 @@ void FelisCatusDembiaSketch::addBaseJointsAndBodies()
 	anteriorPosteriorST.updTransformAxis(0).setCoordinateNames(
             Array<string>("hunch", 1));
     anteriorPosteriorST.updTransformAxis(0).setAxis(Vec3(0, 0, 1));
+
     anteriorPosteriorST.updTransformAxis(1).setCoordinateNames(
             Array<string>("wag", 1));
     anteriorPosteriorST.updTransformAxis(1).setAxis(Vec3(0, 1, 0));
+
     anteriorPosteriorST.updTransformAxis(2).setCoordinateNames(
             Array<string>("twist", 1));
 	anteriorPosteriorST.updTransformAxis(2).setAxis(Vec3(1, 0, 0));
+    // There is no translation between the segments, and so we do not name the
+    // remaining 3 TransformAxis's in the SpatialTransform.
 
     CustomJoint * anteriorPosterior = new CustomJoint("anterior_posterior",
-            *_anteriorBody, locAPInAnterior, orientAPInAnterior,
-            *_posteriorBody, locAPInPosterior, orientAPInPosterior,
+            *anteriorBody, locAPInAnterior, orientAPInAnterior,
+            *posteriorBody, locAPInPosterior, orientAPInPosterior,
 			anteriorPosteriorST);
 
-    // Set coordinate limits based on empirical data (i.e., photos & video).
+    // Set coordinate limits and default values from empirical data (i.e.,
+    // photos & video).
 	CoordinateSet & anteriorPosteriorCS = anteriorPosterior->upd_CoordinateSet();
-    // hunch
+    // hunch; [-20, +90] degrees
     double anteriorPosteriorCS0range[2] = {convertDegreesToRadians(-20),
-										   convertDegreesToRadians(90)};  // -20/+90 deg
+										   convertDegreesToRadians(90)};
     anteriorPosteriorCS[0].setRange(anteriorPosteriorCS0range);
-    anteriorPosteriorCS[0].setDefaultValue(0);
-    anteriorPosteriorCS[0].setDefaultLocked(true);
-	// wag
-    double anteriorPosteriorCS1range[2] = {-0.25 * Pi, 0.25 * Pi};   // +/- 45 deg
+    anteriorPosteriorCS[0].setDefaultValue(convertDegreesToRadians(30));
+    anteriorPosteriorCS[0].setDefaultLocked(false);
+	// wag; [-45, 45] degrees
+    double anteriorPosteriorCS1range[2] = {-0.25 * Pi, 0.25 * Pi};
     anteriorPosteriorCS[1].setRange(anteriorPosteriorCS1range);
-    anteriorPosteriorCS[1].setDefaultValue(0);
-    anteriorPosteriorCS[1].setDefaultLocked(true);
-	// twist
+    anteriorPosteriorCS[1].setDefaultValue(convertDegreesToRadians(-15));
+    anteriorPosteriorCS[1].setDefaultLocked(false);
+	// twist; [-80, 80] degrees
     double anteriorPosteriorCS2range[2] = {convertDegreesToRadians(-80),
-										   convertDegreesToRadians(80)};  // +/- 80 deg
+										   convertDegreesToRadians(80)};
     anteriorPosteriorCS[2].setRange(anteriorPosteriorCS2range);
     anteriorPosteriorCS[2].setDefaultValue(0);
+    // This model can't twist; we'll unlock this for the next model.
     anteriorPosteriorCS[2].setDefaultLocked(true);
 
-    _cat.addBody(_anteriorBody);
-    _cat.addBody(_posteriorBody);
-}
+    // Add bodies to the model
+    // ------------------------------------------------------------------------
+    // ...now that we have connected the bodies via joints.
+    cat.addBody(anteriorBody);
+    cat.addBody(posteriorBody);
 
-void FelisCatusDembiaSketch::addTwist()
-{
-	// Unlock twist.
-	_cat.updCoordinateSet().get("twist").setDefaultLocked(false);
-	
-	// Add twist actuator.
-    addCoordinateActuator("twist");
 
-	// Set twist limit force.
-	CoordinateLimitForce * twistLimitForce = 
-		new CoordinateLimitForce("twist", 80, 1.0E2, -80, 1.0E2, 1.0E1, 5.0, false);
-	_cat.addForce(twistLimitForce);
-}
+    // Display goemetry
+    // ------------------------------------------------------------------------
+    // So that we can see what the cat's up to.
+    // By default, the cylinder has a diameter of 1 meter, height of 1 meter,
+    // its centroid is at (0, 0, 0) (its origin), and its axis of symmetry is
+    // its Y axis.
 
-void FelisCatusDembiaSketch::addHunch()
-{
-	// Unlock hunch and change default so that cat is initially hunched.
-	_cat.updCoordinateSet().get("hunch").setDefaultLocked(false);
-	_cat.updCoordinateSet().get("hunch").setDefaultValue(convertDegreesToRadians(30));
-	_cat.updCoordinateSet().get("pitch").setDefaultValue(convertDegreesToRadians(-15));
-	
-	// Add hunch actuator.
-    addCoordinateActuator("hunch");
+    // Anterior body
+    // `````````````
+    // 'cylinder.vtp' is in the Geometry folder of an OpenSim installation.
+    DisplayGeometry * anteriorDisplay = new DisplayGeometry("cylinder.vtp");
+    anteriorDisplay->setOpacity(0.5);
+    anteriorDisplay->setColor(Vec3(0.5, 0.5, 0.5));
 
-	// Set hunch limit force
-	CoordinateLimitForce * hunchLimitForce = 
-		new CoordinateLimitForce("hunch", 90, 1.0E2, -20, 1.0E2, 1.0E1, 2.0, false);
-	_cat.addForce(hunchLimitForce);
-}
+    // We want the centroid to be at (-0.5 * segmentalLength, 0, 0), and for
+    // its axis of symmetry to be its body's (the body it's helping us to
+    // visualize) Y axis.
+    Rotation rot;
+    // We align the cylinder's symmetry (Y) axis with the body's X axis:
+    rot.setRotationFromAngleAboutZ(0.5 * Pi);
+    anteriorDisplay->setTransform(
+            Transform(rot, Vec3(-0.5 * segmentalLength, 0, 0)));
+    anteriorDisplay->setScaleFactors(
+            Vec3(_segmentalDiam, segmentalLength, segmentalDiam));
+    anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorDisplay);
+    anteriorBody->updDisplayer()->setShowAxes(true);
 
-void FelisCatusDembiaSketch::addWag()
-{
-	// Unlock wag.
-	_cat.updCoordinateSet().get("wag").setDefaultLocked(false);
-	
-	// Add wag actuator.
-    addCoordinateActuator("wag");
+    // Posterior body
+    // ``````````````
+    DisplayGeometry * posteriorDisplay = new DisplayGeometry("cylinder.vtp");
+    posteriorDisplay->setOpacity(0.5);
+    posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
+    // We specify the desired location of the cylinder's centroid:
+    posteriorDisplay->setTransform(
+            Transform(rot, Vec3(0.5 * segmentalLength, 0, 0)));
+    posteriorDisplay->setScaleFactors(
+            Vec3(segmentalDiam, segmentalLength, segmentalDiam));
+    posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorDisplay);
+    posteriorBody->updDisplayer()->setShowAxes(true);
 
-	// Set wag limit force.
-	CoordinateLimitForce * wagLimitForce = 
-		new CoordinateLimitForce("wag", 45, 1.0E2, -45, 1.0E2, 1.0E1, 2.0, false);
-	_cat.addForce(wagLimitForce);
-}
 
-void FelisCatusDembiaSketch::createLegBodies()
-{
-    // Obtain inertia via pass-by-reference.
-    SimTK::Mat33 segmentalInertia;
-    _anteriorBody->getInertia(segmentalInertia);
-    Inertia legsInertia = (_legsMass/_segmentalMass) * Inertia(segmentalInertia);
+    // Actuation
+    // ------------------------------------------------------------------------
+    // Since these coordinates are angles, the actuators are effectively torque
+    // actuators. The reason to use a CoordinateActuator instead of a
+    // TorqueActuator is that we needn't specify the axis of the actuation, or
+    // the bodies on which it acts.
 
-    // Legs.
-    _anteriorLegs = new Body();
-    _anteriorLegs->setName("anteriorLegs");
-    _anteriorLegs->setMass(_legsMass);
-    _anteriorLegs->setMassCenter(Vec3(0.5 * _legsLength, 0, 0));
-    _anteriorLegs->setInertia(legsInertia);
+    // hunch
+    CoordinateActuator * hunchAct = new CoordinateActuator("hunch");
+    hunchAct->setName("hunch_actuator");
+    hunchAct->setMinControl(-maxTorque);
+    hunchAct->setMaxControl(maxTorque);
+    cat.addForce(hunchAct);
 
-    _posteriorLegs = new Body();
-    _posteriorLegs->setName("posteriorLegs");
-    _posteriorLegs->setMass(_legsMass);
-    _posteriorLegs->setMassCenter(Vec3(0.5 * _legsLength, 0, 0));
-    _posteriorLegs->setInertia(legsInertia);
-}
+    // wag
+    CoordinateActuator * wagAct = new CoordinateActuator("wag");
+    wagAct->setName("wag_actuator");
+    wagAct->setMinControl(-maxTorque);
+    wagAct->setMaxControl(maxTorque);
+    cat.addForce(wagAct);
 
-void FelisCatusDembiaSketch::addRigidLegs()
-{
-	Vec3 locALegsInAnterior(-0.75 * _segmentalLength, 0.5 * _segmentalDiam, 0);
-    Vec3 orientALegsInAnterior(0);
-    Vec3 locALegsInLegs(0);
-	State& state = _cat.initSystem();
-	double pitch = _cat.getCoordinateSet().get("pitch").getValue(state);
-    Vec3 orientALegsInLegs(0, 0, -0.5 * Pi + pitch);
-    WeldJoint * anteriorToLegs = new WeldJoint("anterior_legs",
-            *_anteriorBody, locALegsInAnterior, orientALegsInAnterior,
-            *_anteriorLegs, locALegsInLegs, orientALegsInLegs);
 
-	Vec3 locPLegsInPosterior(0.75 * _segmentalLength, 0.5 * _segmentalDiam, 0);
-    Vec3 orientPLegsInPosterior(0, Pi, 0);
-    Vec3 locPLegsInLegs(0);
-	
-    Vec3 orientPLegsInLegs(0, 0, -0.5 * Pi + pitch);
-    WeldJoint * posteriorToLegs = new WeldJoint("posterior_legs",
-            *_posteriorBody, locPLegsInPosterior, orientPLegsInPosterior,
-            *_posteriorLegs, locPLegsInLegs, orientPLegsInLegs);
+    // Print the model
+    // ------------------------------------------------------------------------
+    cat.print("flippinfelines_hunch_wag.osim");
 
-	_cat.addBody(_anteriorLegs);
-	_cat.addBody(_posteriorLegs);
-}
 
-void FelisCatusDembiaSketch::addRetractLegs(bool frontLegsRetract)
-{
-	// Adding 1-DOF legs.
-	Vec3 locALegsInAnterior(-0.75 * _segmentalLength, 0.5 * _segmentalDiam, 0);
-    Vec3 orientALegsInAnterior(0);
-    Vec3 locALegsInLegs(0);
-    Vec3 orientALegsInLegs(0, 0, -0.5 * Pi);
-    PinJoint * anteriorToLegs = new PinJoint("anterior_legs",
-            *_anteriorBody, locALegsInAnterior, orientALegsInAnterior,
-            *_anteriorLegs, locALegsInLegs, orientALegsInLegs);
-    CoordinateSet & anteriorToLegsCS = anteriorToLegs->upd_CoordinateSet();
-    anteriorToLegsCS[0].setName("frontLegs");
-    double anteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
-    anteriorToLegsCS[0].setRange(anteriorToLegsCS0range);
-    State& state = _cat.initSystem();
-	double pitch = _cat.getCoordinateSet().get("pitch").getValue(state);
-	if (frontLegsRetract)
-    {
-        anteriorToLegsCS[0].setDefaultValue(-pitch);
-        anteriorToLegsCS[0].setDefaultLocked(false);
-    }
-    else
-    {
-        anteriorToLegsCS[0].setDefaultValue(0.25 * Pi);
-        anteriorToLegsCS[0].setDefaultLocked(true);
-    }
+    // Second model: adding legs for the variable inertia mechanism of flipping
+    // ========================================================================
+    // This model will additionally be able to twist, and has legs.
+    cat.setName("Leland_hunch_wag_twist_legs");
 
-	Vec3 locPLegsInPosterior(0.75 * _segmentalLength, 0.5 * _segmentalDiam, 0);
-    Vec3 orientPLegsInPosterior(0, Pi, 0);
-    Vec3 locPLegsInLegs(0);
-    Vec3 orientPLegsInLegs(0, 0, -0.5 * Pi);
-    PinJoint * posteriorToLegs = new PinJoint("posterior_legs",
-            *_posteriorBody, locPLegsInPosterior, orientPLegsInPosterior,
-            *_posteriorLegs, locPLegsInLegs, orientPLegsInLegs);
-    CoordinateSet & posteriorToLegsCS = posteriorToLegs->upd_CoordinateSet();
-    posteriorToLegsCS[0].setName("backLegs");
-    double posteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
-    posteriorToLegsCS[0].setRange(posteriorToLegsCS0range);
-    posteriorToLegsCS[0].setDefaultValue(-pitch);
-    posteriorToLegsCS[0].setDefaultLocked(false);
+    // Allow twist.
+    anteriorPosteriorCS[2].setDefaultLocked(false);
 
-	_cat.addBody(_anteriorLegs);
-	_cat.addBody(_posteriorLegs);
+    // Leg properties
+    // ------------------------------------------------------------------------
+    double legsLength = 0.125;                             // m
+    double legsDiam = 0.1 * _legsLength;                   // m
+    // Sum of both legs (60% distance across the belly):
+    double legsWidth = 0.6 * _segmentalDiam;               // m
+    double legsMass = 0.2;                                 // kg
 
-	// Adding leg actuators and limit forces.
-    if (frontLegsRetract)
-    {
-        addCoordinateActuator("frontLegs");
+    // Leg bodies
+    // ------------------------------------------------------------------------
 
-		CoordinateLimitForce * frontLegsLimitForce = 
-			new CoordinateLimitForce("frontLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
-		_cat.addForce(frontLegsLimitForce);
-    }
-    
-    addCoordinateActuator("backLegs");
+    // Leg joints
+    // ------------------------------------------------------------------------
 
-	CoordinateLimitForce * backLegsLimitForce = 
-		new CoordinateLimitForce("backLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
-	_cat.addForce(backLegsLimitForce);
-}
-
-void FelisCatusDembiaSketch::addLegsDisplayGeometry()
-{
-    DisplayGeometry * anteriorLegsDisplay = new DisplayGeometry("box.vtp");
-    anteriorLegsDisplay->setOpacity(0.5);
-    anteriorLegsDisplay->setColor(Vec3(0.7, 0.7, 0.7));
-    anteriorLegsDisplay->setTransform(Transform(Vec3(0.3 * _legsLength, 0, 0)));
-    anteriorLegsDisplay->setScaleFactors(Vec3(_legsLength, _legsDiam, _legsWidth));
-    _anteriorLegs->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorLegsDisplay);
-    _anteriorLegs->updDisplayer()->setShowAxes(true);
-
-    DisplayGeometry * posteriorLegsDisplay = new DisplayGeometry("box.vtp");
-    posteriorLegsDisplay->setOpacity(0.5);
-    posteriorLegsDisplay->setColor(Vec3(0.7, 0.7, 0.7));
-    posteriorLegsDisplay->setTransform(Transform(Vec3(0.3 * _legsLength, 0, 0)));
-    posteriorLegsDisplay->setScaleFactors(Vec3(_legsLength, _legsDiam, _legsWidth));
-    _posteriorLegs->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorLegsDisplay);
-    _posteriorLegs->updDisplayer()->setShowAxes(true);
-}
-
-void FelisCatusDembiaSketch::addTail(TailType whichTail)
-{
-    // For now, only considering Two-DOF tail: one that can 'pitch', then can
-    // rotate in a cone with that pitch.
-
-    // Connecting posterior and tail bodies via a custom joint.
-	// Rotation is defined via XZ Euler angles:
-    // shake is rotation of the tail about a cone whose half-angle (?) is
-    // perch.
-    double tailMassFactor = 0.5;
-    double tailSizeFactor = 1.2;
-
-    Body * tailBody = new Body();
-    tailBody->setName("tailBody");
-    tailBody->setMass(tailMassFactor * _segmentalMass);
-    tailBody->setMassCenter(Vec3(tailSizeFactor * _segmentalLength, 0, 0));
-    tailBody->setInertia(_zeroInertia);
-
-    Vec3 locPTInPosterior(_segmentalLength, 0, 0);
-    Vec3 orientPTInPosterior(0);
-    Vec3 locPTInTail(0);
-    Vec3 orientPTInTail(0);
-
-	SpatialTransform posteriorTailST;
-	posteriorTailST.updTransformAxis(0).setCoordinateNames(
-            Array<string>("shake", 1));
-    posteriorTailST.updTransformAxis(0).setAxis(Vec3(1, 0, 0));
-    posteriorTailST.updTransformAxis(1).setCoordinateNames(
-            Array<string>("perch", 1));
-    posteriorTailST.updTransformAxis(1).setAxis(Vec3(0, 0, 1));
-    // Unused, but was causing 'colinear axies' error (default was 0 0 1):
-    posteriorTailST.updTransformAxis(2).setAxis(Vec3(0, 1, 0));
-
-    CustomJoint * posteriorTail = new CustomJoint("posterior_tail",
-            *_posteriorBody, locPTInPosterior, orientPTInPosterior,
-            *tailBody, locPTInTail, orientPTInTail,
-			posteriorTailST);
-
-    CoordinateSet & posteriorTailCS = posteriorTail->upd_CoordinateSet();
-    // shake
-    double posteriorTailCS0range[2] = {-2.0 * Pi, 2.0 * Pi};
-    posteriorTailCS[0].setRange(posteriorTailCS0range);
-    posteriorTailCS[0].setDefaultValue(0);
-    posteriorTailCS[0].setDefaultLocked(false);
-    // perch
-    double posteriorTailCS1range[2] = {0, 0.5 * Pi};
-    posteriorTailCS[1].setRange(posteriorTailCS1range);
-    posteriorTailCS[1].setDefaultValue(0.25 * Pi);
-    if (whichTail == FixedPerch)
-        posteriorTailCS[1].setDefaultLocked(true);
-    else if (whichTail == FreePerch)
-        posteriorTailCS[1].setDefaultLocked(false);
-
-    // Display.
-    DisplayGeometry * tailBodyDisplay = new DisplayGeometry("sphere.vtp");
-    tailBodyDisplay->setOpacity(0.5);
-    tailBodyDisplay->setTransform(Transform(Vec3(0.5 * tailSizeFactor * _segmentalLength, 0, 0)));
-    tailBodyDisplay->setScaleFactors(
-            Vec3(tailSizeFactor * _segmentalLength,
-                0.1 * tailSizeFactor * _segmentalLength,
-                0.1 * tailSizeFactor * _segmentalLength));
-    tailBody->updDisplayer()->updGeometrySet().adoptAndAppend(tailBodyDisplay);
-    tailBody->updDisplayer()->setShowAxes(true);
-
-    _cat.addBody(tailBody);
-
-    // Actuation.
-    addCoordinateActuator("shake");
-
-    if (whichTail == FreePerch)
-        addCoordinateActuator("perch");
-}
-
-void FelisCatusDembiaSketch::addCoordinateActuator(string coordinateName)
-{
-    CoordinateActuator * act = new CoordinateActuator(coordinateName);
-    act->setName(coordinateName + "_actuator");
-    act->setMinControl(-_maxTorque);
-    act->setMaxControl(_maxTorque);
-    _cat.addForce(act);
-}
+    return EXIT_SUCCESS;
+};

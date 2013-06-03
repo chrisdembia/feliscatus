@@ -82,8 +82,8 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 ADD_EXECUTABLE(optimize optimize.cpp FelisCatusOptimizerSystem.h)
 TARGET_LINK_LIBRARIES(optimize ${OSIM_LIBRARIES})
 
-ADD_EXECUTABLE(optimizer_tool_template optimizer_tool_template.cpp
+ADD_EXECUTABLE(optimize_input_template optimize_input_template.cpp
     FelisCatusOptimizerSystem.h)
-TARGET_LINK_LIBRARIES(optimizer_tool_template ${OSIM_LIBRARIES})
+TARGET_LINK_LIBRARIES(optimize_input_template ${OSIM_LIBRARIES})
 
 
