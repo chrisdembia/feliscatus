@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 # Define project
-SET(PROJ_NAME FelisCatus)
+SET(PROJ_NAME FlippinFelines)
 PROJECT(${PROJ_NAME})
 
 ################################################################################
@@ -74,16 +74,16 @@ SET(OSIM_LIBRARIES
 
 # The below is specific to this project.
 
-ADD_EXECUTABLE(modeling modeling.cpp FelisCatusModeling.h)
+ADD_EXECUTABLE(modeling modeling.cpp)
 TARGET_LINK_LIBRARIES(modeling ${OSIM_LIBRARIES})
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 
-ADD_EXECUTABLE(optimize optimize.cpp FelisCatusOptimizerSystem.h)
+ADD_EXECUTABLE(optimize optimize.cpp FlippinFelinesOptimizerSystem.h)
 TARGET_LINK_LIBRARIES(optimize ${OSIM_LIBRARIES})
 
 ADD_EXECUTABLE(optimize_input_template optimize_input_template.cpp
-    FelisCatusOptimizerSystem.h)
+    FlippinFelinesOptimizerSystem.h)
 TARGET_LINK_LIBRARIES(optimize_input_template ${OSIM_LIBRARIES})
 
 

@@ -1,5 +1,5 @@
 
-#include "FelisCatusModeling.h"
+#include <OpenSim/OpenSim.h>
 
 int main(int argc, char *argv[])
 {
@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
     cat.setName("Leland_hunch_wag");
 
     // 'Turn off' gravity so it's easier to watch an animation of the flip.
+    using SimTK::Vec3;
     cat.setGravity(Vec3(0, 0, 0));
 
 
@@ -42,10 +43,12 @@ int main(int argc, char *argv[])
     double Ixy = 0;
     double Ixz = 0;
     double Iyz = 0;
-    Inertia segmentalInertia = OpenSim::Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
+    using SimTK::Inertia;
+    Inertia segmentalInertia = Inertia(Ixx, Iyy, Izz, Ixz, Ixz, Iyz);
 
     // Anterior half of cat.
-    Body * anteriorBody = new OpenSim::Body();
+    using OpenSim::Body;
+    Body * anteriorBody = new Body();
     anteriorBody->setName("anteriorBody");
     anteriorBody->setMass(segmentalMass);
     // By choosing the following as the mass center, we choose the origin of
@@ -55,7 +58,7 @@ int main(int argc, char *argv[])
     anteriorBody->setInertia(segmentalInertia);
 
     // Posterior half of cat; same mass properties as anterior half.
-    Body * posteriorBody = new OpenSim::Body();
+    Body * posteriorBody = new Body();
     posteriorBody->setName("posteriorBody");
     posteriorBody->setMass(segmentalMass);
     // Posterior body sits to the +X direction from its origin.
@@ -65,10 +68,11 @@ int main(int argc, char *argv[])
 
     // Joints
     // ------------------------------------------------------------------------
-    Body & ground = _cat.getGroundBody();
+    Body & ground = cat.getGroundBody();
 
     // Anterior body to the ground via a CustomJoint
     // `````````````````````````````````````````````
+    using OpenSim::CustomJoint;
 	// Rotation is defined via YZX Euler angles, named yaw, pitch, and
 	// roll respectively. The important translation is in Y, the direction
 	// of gravity.
@@ -82,29 +86,30 @@ int main(int argc, char *argv[])
     // defined about the axes of our choosing. The remaining 3 are translations,
     // which we choose to be along the X, Y, and Z directions of the ground's
     // frame.
-	SpatialTransform groundAnteriorST;
+    using OpenSim::Array;
+    OpenSim::SpatialTransform groundAnteriorST;
     groundAnteriorST.updTransformAxis(0).setCoordinateNames(
-            Array<string>("yaw", 1));
+            Array<std::string>("yaw", 1));
     groundAnteriorST.updTransformAxis(0).setAxis(Vec3(0, 1, 0));
 
     groundAnteriorST.updTransformAxis(1).setCoordinateNames(
-            Array<string>("pitch", 1));
+            Array<std::string>("pitch", 1));
     groundAnteriorST.updTransformAxis(1).setAxis(Vec3(0, 0, 1));
 
     groundAnteriorST.updTransformAxis(2).setCoordinateNames(
-            Array<string>("roll", 1));
+            Array<std::string>("roll", 1));
     groundAnteriorST.updTransformAxis(2).setAxis(Vec3(1, 0, 0));
 
     groundAnteriorST.updTransformAxis(3).setCoordinateNames(
-            Array<string>("tx", 1));
+            Array<std::string>("tx", 1));
     groundAnteriorST.updTransformAxis(3).setAxis(Vec3(1, 0, 0));
 
     groundAnteriorST.updTransformAxis(4).setCoordinateNames(
-            Array<string>("ty", 1));
+            Array<std::string>("ty", 1));
     groundAnteriorST.updTransformAxis(4).setAxis(Vec3(0, 1, 0));
 
     groundAnteriorST.updTransformAxis(5).setCoordinateNames(
-            Array<string>("tz", 1));
+            Array<std::string>("tz", 1));
     groundAnteriorST.updTransformAxis(5).setAxis(Vec3(0, 0, 1));
 
     CustomJoint * groundAnterior = new CustomJoint("ground_anterior",
@@ -114,8 +119,13 @@ int main(int argc, char *argv[])
 
     // Edit the Coordinate's created by the CustomJoint. The 6 coordinates
     // correspond to the TransformAxis's we set above.
+    using OpenSim::CoordinateSet;
+    using SimTK::convertDegreesToRadians;
+    using SimTK::Pi;
     CoordinateSet & groundAnteriorCS = groundAnterior->upd_CoordinateSet();
     // yaw
+    // As is, the range only affects how one can vary this coordinate in the
+    // GUI. The range is not a joint limit, and does not affect dynamics.
     double groundAnteriorCS0range[2] = {-Pi, Pi};
     groundAnteriorCS[0].setRange(groundAnteriorCS0range);
     groundAnteriorCS[0].setDefaultValue(0);
@@ -123,7 +133,7 @@ int main(int argc, char *argv[])
     // pitch
     double groundAnteriorCS1range[2] = {-Pi, Pi};
     groundAnteriorCS[1].setRange(groundAnteriorCS1range);
-    groundAnteriorCS[1].setDefaultValue(0);
+    groundAnteriorCS[1].setDefaultValue(convertDegreesToRadians(-15));
     groundAnteriorCS[1].setDefaultLocked(false);
     // roll
     double groundAnteriorCS2range[2] = {-Pi, Pi};
@@ -154,17 +164,17 @@ int main(int argc, char *argv[])
     Vec3 locAPInPosterior(0);
     Vec3 orientAPInPosterior(0);
 
-	SpatialTransform anteriorPosteriorST;
+    OpenSim::SpatialTransform anteriorPosteriorST;
 	anteriorPosteriorST.updTransformAxis(0).setCoordinateNames(
-            Array<string>("hunch", 1));
+            Array<std::string>("hunch", 1));
     anteriorPosteriorST.updTransformAxis(0).setAxis(Vec3(0, 0, 1));
 
     anteriorPosteriorST.updTransformAxis(1).setCoordinateNames(
-            Array<string>("wag", 1));
+            Array<std::string>("wag", 1));
     anteriorPosteriorST.updTransformAxis(1).setAxis(Vec3(0, 1, 0));
 
     anteriorPosteriorST.updTransformAxis(2).setCoordinateNames(
-            Array<string>("twist", 1));
+            Array<std::string>("twist", 1));
 	anteriorPosteriorST.updTransformAxis(2).setAxis(Vec3(1, 0, 0));
     // There is no translation between the segments, and so we do not name the
     // remaining 3 TransformAxis's in the SpatialTransform.
@@ -186,15 +196,16 @@ int main(int argc, char *argv[])
 	// wag; [-45, 45] degrees
     double anteriorPosteriorCS1range[2] = {-0.25 * Pi, 0.25 * Pi};
     anteriorPosteriorCS[1].setRange(anteriorPosteriorCS1range);
-    anteriorPosteriorCS[1].setDefaultValue(convertDegreesToRadians(-15));
+    anteriorPosteriorCS[1].setDefaultValue(0);
     anteriorPosteriorCS[1].setDefaultLocked(false);
 	// twist; [-80, 80] degrees
     double anteriorPosteriorCS2range[2] = {convertDegreesToRadians(-80),
 										   convertDegreesToRadians(80)};
     anteriorPosteriorCS[2].setRange(anteriorPosteriorCS2range);
     anteriorPosteriorCS[2].setDefaultValue(0);
-    // This model can't twist; we'll unlock this for the next model.
+    // This first model can't twist; we'll unlock this for the next model.
     anteriorPosteriorCS[2].setDefaultLocked(true);
+
 
     // Add bodies to the model
     // ------------------------------------------------------------------------
@@ -205,6 +216,7 @@ int main(int argc, char *argv[])
 
     // Display goemetry
     // ------------------------------------------------------------------------
+    using OpenSim::DisplayGeometry;
     // So that we can see what the cat's up to.
     // By default, the cylinder has a diameter of 1 meter, height of 1 meter,
     // its centroid is at (0, 0, 0) (its origin), and its axis of symmetry is
@@ -220,13 +232,13 @@ int main(int argc, char *argv[])
     // We want the centroid to be at (-0.5 * segmentalLength, 0, 0), and for
     // its axis of symmetry to be its body's (the body it's helping us to
     // visualize) Y axis.
-    Rotation rot;
+    SimTK::Rotation rot;
     // We align the cylinder's symmetry (Y) axis with the body's X axis:
     rot.setRotationFromAngleAboutZ(0.5 * Pi);
     anteriorDisplay->setTransform(
-            Transform(rot, Vec3(-0.5 * segmentalLength, 0, 0)));
+            SimTK::Transform(rot, Vec3(-0.5 * segmentalLength, 0, 0)));
     anteriorDisplay->setScaleFactors(
-            Vec3(_segmentalDiam, segmentalLength, segmentalDiam));
+            Vec3(segmentalDiam, segmentalLength, segmentalDiam));
     anteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(anteriorDisplay);
     anteriorBody->updDisplayer()->setShowAxes(true);
 
@@ -237,7 +249,7 @@ int main(int argc, char *argv[])
     posteriorDisplay->setColor(Vec3(0.7, 0.7, 0.7));
     // We specify the desired location of the cylinder's centroid:
     posteriorDisplay->setTransform(
-            Transform(rot, Vec3(0.5 * segmentalLength, 0, 0)));
+            SimTK::Transform(rot, Vec3(0.5 * segmentalLength, 0, 0)));
     posteriorDisplay->setScaleFactors(
             Vec3(segmentalDiam, segmentalLength, segmentalDiam));
     posteriorBody->updDisplayer()->updGeometrySet().adoptAndAppend(posteriorDisplay);
@@ -250,6 +262,7 @@ int main(int argc, char *argv[])
     // actuators. The reason to use a CoordinateActuator instead of a
     // TorqueActuator is that we needn't specify the axis of the actuation, or
     // the bodies on which it acts.
+    using OpenSim::CoordinateActuator;
 
     // hunch
     CoordinateActuator * hunchAct = new CoordinateActuator("hunch");
@@ -282,16 +295,107 @@ int main(int argc, char *argv[])
     // Leg properties
     // ------------------------------------------------------------------------
     double legsLength = 0.125;                             // m
-    double legsDiam = 0.1 * _legsLength;                   // m
+    double legsDiam = 0.1 * legsLength;                    // m
     // Sum of both legs (60% distance across the belly):
-    double legsWidth = 0.6 * _segmentalDiam;               // m
+    double legsWidth = 0.6 * segmentalDiam;                // m
     double legsMass = 0.2;                                 // kg
 
     // Leg bodies
     // ------------------------------------------------------------------------
+    // Scale the segmental inertia.
+    Inertia legsInertia = (legsMass/segmentalMass) * segmentalInertia;
+
+    // Legs.
+    Body * anteriorLegs = new Body();
+    anteriorLegs->setName("anteriorLegs");
+    anteriorLegs->setMass(legsMass);
+    anteriorLegs->setMassCenter(Vec3(0.5 * legsLength, 0, 0));
+    anteriorLegs->setInertia(legsInertia);
+
+    Body * posteriorLegs = new Body();
+    posteriorLegs->setName("posteriorLegs");
+    posteriorLegs->setMass(legsMass);
+    posteriorLegs->setMassCenter(Vec3(0.5 * legsLength, 0, 0));
+    posteriorLegs->setInertia(legsInertia);
 
     // Leg joints
     // ------------------------------------------------------------------------
+    using OpenSim::PinJoint;
+
+    // Anterior leg
+    // ````````````
+	Vec3 locALegsInAnterior(-0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
+    Vec3 orientALegsInAnterior(0);
+    Vec3 locALegsInLegs(0);
+    // TODO SEAN PLEASE EXPLAIN THIS NEXT LINE. I DON'T GET IT!
+    Vec3 orientALegsInLegs(0, 0, -0.5 * Pi);
+    PinJoint * anteriorToLegs = new PinJoint("anterior_legs",
+            *anteriorBody, locALegsInAnterior, orientALegsInAnterior,
+            *anteriorLegs, locALegsInLegs, orientALegsInLegs);
+    CoordinateSet & anteriorToLegsCS = anteriorToLegs->upd_CoordinateSet();
+    anteriorToLegsCS[0].setName("frontLegs");
+    double anteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
+    anteriorToLegsCS[0].setRange(anteriorToLegsCS0range);
+
+    // So that the legs are directed strictly upwards initially:
+    double pitch = groundAnteriorCS[1].getDefaultValue();
+    anteriorToLegsCS[0].setDefaultValue(-pitch);
+    anteriorToLegsCS[0].setDefaultLocked(false);
+
+    // Posterior leg
+    // `````````````
+	Vec3 locPLegsInPosterior(0.75 * segmentalLength, 0.5 * segmentalDiam, 0);
+    Vec3 orientPLegsInPosterior(0, Pi, 0);
+    Vec3 locPLegsInLegs(0);
+    Vec3 orientPLegsInLegs(0, 0, -0.5 * Pi);
+    PinJoint * posteriorToLegs = new PinJoint("posterior_legs",
+            *posteriorBody, locPLegsInPosterior, orientPLegsInPosterior,
+            *posteriorLegs, locPLegsInLegs, orientPLegsInLegs);
+    CoordinateSet & posteriorToLegsCS = posteriorToLegs->upd_CoordinateSet();
+    posteriorToLegsCS[0].setName("backLegs");
+    double posteriorToLegsCS0range[2] = {-0.5 * Pi, 0.5 * Pi};
+    posteriorToLegsCS[0].setRange(posteriorToLegsCS0range);
+    posteriorToLegsCS[0].setDefaultValue(-pitch);
+    posteriorToLegsCS[0].setDefaultLocked(false);
+
+    // Add bodies to the model
+    // ------------------------------------------------------------------------
+    // ...now that we have connected the bodies via joints.
+    cat.addBody(anteriorLegs);
+    cat.addBody(posteriorLegs);
+
+    // Display goemetry
+    // ------------------------------------------------------------------------
+    // Both legs have the same display geometry.
+
+    // 'box.vtp' is in the Geometry folder of an OpenSim installation.
+    DisplayGeometry legsDisplay = DisplayGeometry("box.vtp");
+    legsDisplay.setOpacity(0.5);
+    legsDisplay.setColor(Vec3(0.7, 0.7, 0.7));
+    legsDisplay.setTransform(Transform(Vec3(0.3 * legsLength, 0, 0)));
+    legsDisplay.setScaleFactors(Vec3(legsLength, legsDiam, legsWidth));
+
+    anteriorLegs->updDisplayer()->updGeometrySet().cloneAndAppend(legsDisplay);
+    anteriorLegs->updDisplayer()->setShowAxes(true);
+
+    posteriorLegs->updDisplayer()->updGeometrySet().cloneAndAppend(legsDisplay);
+    posteriorLegs->updDisplayer()->setShowAxes(true);
+
+    // Enforce joint limits on the legs
+    // ------------------------------------------------------------------------
+    using OpenSim::CoordinateLimitForce;
+
+    CoordinateLimitForce * frontLegsLimitForce = new CoordinateLimitForce(
+                "frontLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
+	cat.addForce(frontLegsLimitForce);
+
+    CoordinateLimitForce * backLegsLimitForce = new CoordinateLimitForce(
+                "backLegs", 90, 1.0E2, -90, 1.0E2, 1.0E1, 2.0, false);
+	cat.addForce(backLegsLimitForce);
+
+    // Print the model
+    // ------------------------------------------------------------------------
+    cat.print("flippinfelines_hunch_wag_twist_legs.osim");
 
     return EXIT_SUCCESS;
 };
