@@ -297,6 +297,12 @@ int main(int argc, char *argv[])
 
     // Allow twist.
     anteriorPosteriorCS[2].setDefaultLocked(false);
+
+    CoordinateActuator * twistAct = new CoordinateActuator("twist");
+    twistAct->setName("twist_actuator");
+    twistAct->setMinControl(-maxTorque);
+    twistAct->setMaxControl(maxTorque);
+    cat.addForce(twistAct);
     
     
     // Leg properties
@@ -397,6 +403,23 @@ int main(int argc, char *argv[])
     posteriorLegs->updDisplayer()->updGeometrySet().cloneAndAppend(legsDisplay);
     posteriorLegs->updDisplayer()->setShowAxes(true);
     
+
+    // Actuation
+    // ------------------------------------------------------------------------
+    // front legs.
+    CoordinateActuator * frontLegsAct = new CoordinateActuator("frontLegs");
+    frontLegsAct->setName("frontLegs_actuator");
+    frontLegsAct->setMinControl(-maxTorque);
+    frontLegsAct->setMaxControl(maxTorque);
+    cat.addForce(frontLegsAct);
+
+    // back legs.
+    CoordinateActuator * backLegsAct = new CoordinateActuator("backLegs");
+    backLegsAct->setName("backLegs_actuator");
+    backLegsAct->setMinControl(-maxTorque);
+    backLegsAct->setMaxControl(maxTorque);
+    cat.addForce(backLegsAct);
+
     
     // Enforce joint limits on the legs
     // ------------------------------------------------------------------------
