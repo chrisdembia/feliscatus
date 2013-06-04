@@ -14,9 +14,10 @@
 int main(int argc, char * argv[])
 {
     // argc is the number of command line inputs, INCLUDING the name of the
-    //      exectuable as well. Thus, it'll always be greater than/equal to 1.
+    //      exectuable. Thus, it'll always be greater than/equal to 1.
     // argv is an array of space-delimited command line inputs, the first one
-    //      necessarily being the name of the executable.
+    //      necessarily being the name of the executable (e.g., "optimize
+    //      optimize_input_template.xml").
 
     // Get the filename of the FlippinFelinesOptimizerTool serialization.
     if (argc == 2)
@@ -33,7 +34,8 @@ int main(int argc, char * argv[])
         // Use inputs to create the optimizer system.
         FlippinFelinesOptimizerSystem sys(tool);
 
-        // Create the optimizer with our system.
+        // Create the optimizer with our system and the "Best Available"
+        // algorithm.
         SimTK::Optimizer opt(sys, SimTK::BestAvailable);
 
         // Set optimizer settings.
@@ -58,12 +60,14 @@ int main(int argc, char * argv[])
             // Print the control splines so we can explore the resulting actuation.
             sys.printPrescribedControllerFunctionSet(
                     name + "_optimized_parameters.xml");
-
+            
+            // Print out the final value of the objective function.
             std::cout << "Done with " << name << "! f = " << f << std::endl;
         }
         catch (...)
         {
-            // Print the last model/controls so we have something to look at.
+            // Print the last model/controls (not optimized) so we have something
+            // to look at.
             sys.printModel(name + "_last.osim");
             sys.printPrescribedControllerFunctionSet(
                     name + "_last_parameters.xml");
@@ -79,7 +83,7 @@ int main(int argc, char * argv[])
         std::cout << "\nIncorrect input provided. "
             "Must specify the name of a FlippinFelinesOptimizerTool "
             "serialization (setup/input file).\n\nExamples:\n\t"
-            "optimize feliscatusoptimizertool_template.xml\n" << std::endl;
+            "optimize optimize_input_template.xml\n" << std::endl;
         return 0;
     }
 

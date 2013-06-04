@@ -11,7 +11,7 @@ int main(int argc, char * argv[])
     std::string filename = "optimize_input_template.xml";
     OpenSim::FlippinFelinesOptimizerTool tool;
     tool.set_results_directory("results");
-    tool.set_model_filename("feliscatus_*FILL THIS IN*.osim");
+    tool.set_model_filename("flippinfelines_*FILL THIS IN*.osim");
     tool.set_num_optim_spline_points(20);
     tool.set_anterior_legs_down_weight(1.0);
     tool.set_posterior_legs_down_weight(1.0);
@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
 
 	tool.set_use_coordinate_limit_forces(true);
 
-    tool.set_initial_parameters_filename("feliscatusoptimizertool_initParams.xml");
+    tool.set_initial_parameters_filename("initial_parameters.xml");
     tool.print(filename);
 
     std::cout << "Printed template as " << filename << "." << std::endl;

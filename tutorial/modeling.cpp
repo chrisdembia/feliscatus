@@ -1,6 +1,14 @@
 
 #include <OpenSim/OpenSim.h>
 
+/**
+ * Creates two cat models for flipping. The first is simply two segments
+ * connected by a 2-degree-of-freedom (no twist) joint. It exhibits the
+ * counter-rotation mechanism of flipping. The second adds actuate-able
+ * legs to the first model, as well as unlocking the twist degree of
+ * freedom between the model's two halves. This model exhibits the variable-
+ * inertia mechanism of flipping.
+ * */
 int main(int argc, char *argv[])
 {
     // First model: exhibiting the counter-rotation mechanism of flipping

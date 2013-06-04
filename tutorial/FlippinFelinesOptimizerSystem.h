@@ -2,7 +2,9 @@
 #define FELISCATUSOPTIMIZERSYSTEM_H
 
 #include <math.h>
+#include <time.h>
 #include <stdio.h>
+#include <fstream>
 // For platform dependence of making a new directory:
 #if defined(_WIN32)
 #include <direct.h>
@@ -10,20 +12,19 @@
 #include <sys/stat.h>
 #endif
 
-#include <time.h>
-#include <fstream>
-
 #include <OpenSim/OpenSim.h>
 
 namespace OpenSim
 {
 
 /**
- * Manages inputs to an optimization of cat-flipping via OpenSim's
+ * Manages inputs to an optimization of cat flipping via OpenSim's
  * serialization/XML abilities. This is NOT an OpenSim::AbstractTool.
  * */
 class FlippinFelinesOptimizerTool : public Object {
+
 OpenSim_DECLARE_CONCRETE_OBJECT(FlippinFelinesOptimizerTool, Object);
+
 public:
 
     // General properties.
@@ -107,17 +108,18 @@ public:
 			"as many points in each function as given by the num_optim_spline_points "
             "property. y values should be nondimensional and between -1 and 1 "
             "(negative values normalized by minControl if minControl is "
-            "negative; otherwise. Otherwise the value is normalized by "
-            "maxControl). NOTE the output optimized splines are NOT "
-            "NONDIMENSIONAL. Be careful; " "we do not do any error checking.")
+            "negative; otherwise the value is normalized by maxControl). "
+            "NOTE that the output optimized splines are NOT NONDIMENSIONAL. "
+            "Be careful, we do not do any error checking.");
 
+    // Constructors
     FlippinFelinesOptimizerTool() : Object()
     {
         setNull();
         constructProperties();
     }
 
-    /// This constructor allows for the de/serialization.
+    // NOTE: This constructor allows for the de/serialization.
     FlippinFelinesOptimizerTool(const std::string &aFileName, bool
             aUpdateFromXMLNode=true) : Object(aFileName, aUpdateFromXMLNode)
     {
@@ -127,12 +129,14 @@ public:
         updateFromXMLDocument();
     }
 
+private:
+
     void setNull() { }
 
     void constructProperties()
     {
         constructProperty_results_directory("results");
-        constructProperty_model_filename("feliscatus_<FILL_THIS_IN>.osim");
+        constructProperty_model_filename("flippinfelines_*FILL THIS IN*.osim");
         constructProperty_num_optim_spline_points(20);
         constructProperty_anterior_legs_down_weight(1.0);
         constructProperty_posterior_legs_down_weight(1.0);
@@ -153,7 +157,7 @@ public:
 
 		constructProperty_use_coordinate_limit_forces(true);
 
-        constructProperty_initial_parameters_filename("");
+        constructProperty_initial_parameters_filename("initial_parameters.xml");
     }
 
 };
@@ -161,18 +165,19 @@ public:
 }
 
 /**
- * Finds a control input history that achieves certain desired
- * features of a cat's flipping maneuver, as determined by the objective
- * function. The control of the system is performed via a PrescribedController
- * that uses a spline for all actuators.
+ * Finds a control input history that achieves certain desired features
+ * of a cat's flipping maneuver, as determined by the objective function
+ * The control of the system is performed via a PrescribedController that
+ * uses a spline for all actuators.
  *
- * Parameters are odered by actuator, then by spline point index for a given
- * actuator. Parameters are nondimensionalized by the min or max control
- * values for the associated actuator.
+ * Parameters are ordered by actuator, then by spline point index for a
+ * given actuator. Parameters are nondimensionalized by the min or max
+ * control values for the associated actuator.
  * */
-class FlippinFelinesOptimizerSystem : public SimTK::OptimizerSystem
-{
+class FlippinFelinesOptimizerSystem : public SimTK::OptimizerSystem {
+
 public:
+
     /**
      * @param tool Contains all input settings.
      * */
@@ -186,11 +191,11 @@ public:
         _relw(_tool.get_relative_velaccel_weight())
     {
         // Parse inputs
-        // ====================================================================
+        // --------------------------------------------------------------------
         _name = _tool.get_results_directory();
         _cat = OpenSim::Model(_tool.get_model_filename());
 
-		// -- Disable coordinate limit forces?
+		// Disable coordinate limit forces?
 		if (!_tool.get_use_coordinate_limit_forces())
         {
             using OpenSim::CoordinateLimitForce;
@@ -212,9 +217,9 @@ public:
 
 
         // Prepare output
-        // ====================================================================
+        // --------------------------------------------------------------------
 
-        // Create a directory for all the output files we'll create.
+        // Create a directory for all the output files.
 		#if defined(_WIN32)
 			_mkdir(_name.c_str());
 		#else
@@ -235,7 +240,7 @@ public:
 
 
         // Prepare the model to accept the optimizer's parameters
-        // ====================================================================
+        // --------------------------------------------------------------------
 
         // Compute the number of optimization parameters we'll have.
         _numActuators = _cat.getActuators().getSize();
@@ -281,7 +286,7 @@ public:
         }
 
         // Set (nondimensional) parameter limits/bounds
-        // ====================================================================
+        // --------------------------------------------------------------------
         SimTK::Vector lowerLimits(getNumParameters(), -1.0);
         SimTK::Vector upperLimits(getNumParameters(), 1.0);
         setParameterLimits(lowerLimits, upperLimits);
@@ -352,7 +357,7 @@ public:
         _objectiveCalls++;
 
         // Unpack parameters into the model: update spline points
-        // ====================================================================
+        // --------------------------------------------------------------------
         for (int iAct = 0; iAct < _numActuators; iAct++)
         {
             // Max/min for all spline points for the i-th actuator.
@@ -383,7 +388,7 @@ public:
 
 
         // Run a forward dynamics simulation
-        // ====================================================================
+        // --------------------------------------------------------------------
         SimTK::State& initState = _cat.initSystem();
 
         // Construct an integrator.
@@ -397,14 +402,11 @@ public:
         // Integrate from initial time to final time
         manager.setInitialTime(0);
         manager.setFinalTime(_duration);
-
-        // --------------------------------------------------------------------
         manager.integrate(initState);
-        // --------------------------------------------------------------------
 
 
         // Construct the objective function value, term by term
-        // ====================================================================
+        // --------------------------------------------------------------------
 
         // Will be writing to a log while constructing objective function val.
         if (_objectiveCalls % _outputPeriod == 0)
@@ -447,7 +449,7 @@ public:
 
 
         // Update the log and outputs based on this objective function value
-        // ====================================================================
+        // --------------------------------------------------------------------
         _lastCallWasBestYet = _thisCallIsBestYet;
         _thisCallIsBestYet = f <= _objectiveFcnValueBestYet;
         if (_thisCallIsBestYet) _objectiveFcnValueBestYet = f;
@@ -562,7 +564,7 @@ public:
 private:
 
     // Objective function terms
-    // ========================================================================
+    // --------------------------------------------------------------------
 
     // Helper for the member functions above.
     double processObjTerm(std::string name, double weight, double term) const
@@ -738,58 +740,58 @@ private:
     }
 
     // Member variables
-    // ========================================================================
+    // --------------------------------------------------------------------
 
-    /// See constructor.
+    // See constructor.
     std::string _name;
 
-    /// See constructor.
+    // See constructor.
     OpenSim::FlippinFelinesOptimizerTool & _tool;
 
-    // 'mutable' lets us modify the member variable inside const member
-    // functions, such as objectiveFunc() above.
+    // NOTE: 'mutable' lets us modify the member variable inside const member
+    // ----  functions, such as objectiveFunc() above.
 
-    /// The model containing the attributes described in this class'
-    /// description.
+    // The model containing the attributes described in this class'
+    // description.
     mutable OpenSim::Model _cat;
 
-    /// See constructor.
+    // See constructor.
     int _numOptimSplinePoints;
 
-    /// The amount of time for which the simulation runs. Units of seconds.
+    // The amount of time for which the simulation runs. Units of seconds.
     double _duration;
 
-    /// Number of actuators in the model.
+    // Number of actuators in the model.
     int _numActuators;
 
-    /// A vector of the spline functions used in the PrescribedController.
+    // A vector of the spline functions used in the PrescribedController.
     std::vector<OpenSim::SimmSpline *> _splines;
 
-    /// Vector of the splines that gave the best objective value yet.
+    // Vector of the splines that gave the best objective value yet.
     mutable std::vector<OpenSim::SimmSpline> _splinesBestYet;
 
-    /// Counts the number of calls to objectiveFunc.
+    // Counts the number of calls to objectiveFunc.
     mutable int _objectiveCalls;
 
-    /// To record details of this run.
+    // To record details of this run.
     mutable std::ofstream _optLog;
 
-    /// Period for how often objective terms are printed to the log.
+    // Period for how often objective terms are printed to the log.
     static const int _outputPeriod = 100;
 
-    /// The best (lowest) value of the objective function, for logging.
+    // The best (lowest) value of the objective function, for logging.
     mutable double _objectiveFcnValueBestYet;
 
     // To aid with conservative printing of best yet actuation.
     mutable bool _lastCallWasBestYet;
     mutable bool _thisCallIsBestYet;
 
-    /// For task-space objectives.
+    // For task-space objectives.
     SimTK::Vec3 _anteriorFeetPosFromPivotPointInAnterior;
-    /// For task-space objectives.
+    // For task-space objectives.
     SimTK::Vec3 _posteriorFeetPosFromPivotPointInPosterior;
 
-    /// Relative weighting of velocity/acceleration terms.
+    // Relative weighting of velocity/acceleration terms.
     double _relw;
 
 };
