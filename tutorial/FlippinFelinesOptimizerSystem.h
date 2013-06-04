@@ -1,3 +1,4 @@
+
 #ifndef FELISCATUSOPTIMIZERSYSTEM_H
 #define FELISCATUSOPTIMIZERSYSTEM_H
 
@@ -14,8 +15,8 @@
 
 #include <OpenSim/OpenSim.h>
 
-namespace OpenSim
-{
+
+namespace OpenSim {
 
 /**
  * Manages inputs to an optimization of cat flipping via OpenSim's
@@ -162,7 +163,7 @@ private:
 
 };
 
-}
+}  // end using OpenSim namespace
 
 /**
  * Finds a control input history that achieves certain desired features
@@ -198,11 +199,10 @@ public:
 		// Disable coordinate limit forces?
 		if (!_tool.get_use_coordinate_limit_forces())
         {
-            using OpenSim::CoordinateLimitForce;
-
             SimTK::State& initState = _cat.initSystem();
 
             // Loop over all forces in model.
+            using OpenSim::CoordinateLimitForce;
 			for (int iFor = 0; iFor < _cat.getForceSet().getSize(); iFor++)
 			{
 				CoordinateLimitForce * LF = dynamic_cast<CoordinateLimitForce *> (&_cat.updForceSet().get(iFor));
@@ -219,15 +219,15 @@ public:
         // Prepare output
         // --------------------------------------------------------------------
 
-        // Create a directory for all the output files.
+        // Create a results directory for all the output files.
 		#if defined(_WIN32)
 			_mkdir(_name.c_str());
 		#else
 			mkdir(_name.c_str(), 0777);
 		#endif
 
-        // Serialize what we just deserialized, in the results dir,
-        // to keep everything in one nice organized place.
+        // Serialize what we just deserialized, in the results directory, to keep
+        // everything in one organized place.
         _tool.print(_name + "/" + _name + "_setup.xml");
 
         // Create a log for the objective function value and the separate terms
@@ -239,10 +239,10 @@ public:
         _optLog << "Model file name: " << _tool.get_model_filename() << std::endl;
 
 
-        // Prepare the model to accept the optimizer's parameters
+        // Prepare model to accept the optimizer's parameters
         // --------------------------------------------------------------------
 
-        // Compute the number of optimization parameters we'll have.
+        // Compute the number of optimization parameters for the model.
         _numActuators = _cat.getActuators().getSize();
         int numParameters = _numActuators * _numOptimSplinePoints;
         setNumParameters(numParameters);
@@ -261,16 +261,15 @@ public:
         // Add the PrescribedController to the model.
         _cat.addController(flipController);
 
-        // Create SimmSpline's for each actuator
-        // `````````````````````````````````````
+        // Create SimmSpline's for each actuator and push into vector.
         double indexToTimeInSeconds =
             _duration / (double)(_numOptimSplinePoints - 1);
         for (int i = 0; i < _numActuators; i++)
         {
-            // Create a function for this actuator.
+            // Create a spline function for the current actuator.
             _splines.push_back(new OpenSim::SimmSpline());
 
-            // Name this spline with the name of the corresponding actuator.
+            // Name this spline with the name of the current actuator.
             _splines[i]->setName(_cat.getActuators().get(i).getName());
 
             // Add the correct number of points to this spline.
@@ -285,8 +284,7 @@ public:
             flipController->prescribeControlForActuator(i, _splines[i]);
         }
 
-        // Set (nondimensional) parameter limits/bounds
-        // --------------------------------------------------------------------
+        // Set (nondimensional) parameter limits/bounds for the actuators.
         SimTK::Vector lowerLimits(getNumParameters(), -1.0);
         SimTK::Vector upperLimits(getNumParameters(), 1.0);
         setParameterLimits(lowerLimits, upperLimits);
@@ -294,9 +292,8 @@ public:
 
     /**
      * With knowledge from the FlippinFelinesOptimizerTool, provides what should be
-     * used as the initial parameters. If the tool's
-     * initial_parameters_filename is empty, then all initial parameters are
-     * set to 0.0.
+     * used as the initial parameters. If the tool's initial_parameters_filename is
+     * empty, then all initial parameters are set to 0.0.
      * */
     SimTK::Vector initialParameters()
     {
@@ -305,7 +302,7 @@ public:
         if (_tool.get_initial_parameters_filename() != "")
         { // A file is specified.
 
-            // Deserialize the specified XML file.
+            // Deserialize the initial parameters XML file.
             OpenSim::FunctionSet initFcns(_tool.get_initial_parameters_filename());
 
             // Write a copy of the FunctionSet to the results directory.
@@ -313,17 +310,15 @@ public:
 
             OpenSim::Array<std::string> initNames;
             initFcns.getNames(initNames);
-
-            using OpenSim::SimmSpline;
-            // This loop is set up so that the initFcns do not need to be
-            // ordered in the same way as the
-            // optimization parameters are. Also, the number of initFcns
+            
+            // This loop is set up so that the initFcns do not need to be in the same
+            // order as the optimization parameters. Also, the number of initFcns
 			// specified by the initial parameters file can be greater than the
-			// number of actuators in the model (assuming that the initial
-			// parameters file AT LEAST contains the model's actuators).
+			// number of actuators in the model (assuming that the initial parameters
+			// file AT LEAST contains the model's actuators).
+            using OpenSim::SimmSpline;
             for (int iAct = 0; iAct < _numActuators; iAct++)
-            { // Loop through the actuators in the model.
-
+            {
                 // Get index of the initFcn corresponding to the actuator.
 				int iFcn = initFcns.getIndex(_cat.getActuators().get(iAct).getName());
 
@@ -336,7 +331,7 @@ public:
                     // Find the right index in the optimization parameters.
                     int paramIndex = iAct * _numOptimSplinePoints + iPts;
 
-                    // Finally, transfer y value from input to init parameters.
+                    // Transfer y value from input to initial parameters.
                     initParams[paramIndex] = fcn->getY(iPts);
                 }
             }
@@ -344,11 +339,19 @@ public:
         return initParams;
     }
 
+    // Destructor
     ~FlippinFelinesOptimizerSystem()
     {
         _optLog.close();
     }
 
+    
+    /**
+     * Defines desired features for the cat model's flip. Each call to this
+     * function updates the model's control, runs a forward dynamic simulation
+     * with this control, computes the objective value resulting from the
+     * simulation, and saves the results to output.
+     * */
     int objectiveFunc(const SimTK::Vector & parameters,
             bool new_parameters,
             SimTK::Real & f) const
@@ -356,7 +359,7 @@ public:
         // Increment the count of calls to this function.
         _objectiveCalls++;
 
-        // Unpack parameters into the model: update spline points
+        // Unpack parameters into the model (i.e., update spline points)
         // --------------------------------------------------------------------
         for (int iAct = 0; iAct < _numActuators; iAct++)
         {
@@ -369,9 +372,8 @@ public:
             {
                 int paramIndex = iAct * _numOptimSplinePoints + iPts;
 
-                // Dimensional control value.
+                // Dimensionalize the control value.
                 double dimControlValue;
-
                 if  (parameters[paramIndex] < 0 && minControl < 0)
                 { // parameter and minControl are both neg; must negate again.
                     dimControlValue = -minControl * parameters[paramIndex];
@@ -381,12 +383,12 @@ public:
                     dimControlValue = maxControl * parameters[paramIndex];
                 }
 
-                // Finally, edit the spline with the info from parameters.
+                // Edit the spline with the dimensional control value.
                 _splines[iAct]->setY(iPts, dimControlValue);
             }
         }
 
-
+        
         // Run a forward dynamics simulation
         // --------------------------------------------------------------------
         SimTK::State& initState = _cat.initSystem();
@@ -400,19 +402,20 @@ public:
         _cat.getMultibodySystem().realize(initState, SimTK::Stage::Acceleration);
 
         // Integrate from initial time to final time
-        manager.setInitialTime(0);
+        manager.setInitialTime(0.0);
         manager.setFinalTime(_duration);
         manager.integrate(initState);
 
 
-        // Construct the objective function value, term by term
+        // Construct the objective function, term by term
         // --------------------------------------------------------------------
 
-        // Will be writing to a log while constructing objective function val.
+        // Will be writing to a log while constructing the objective function.
         if (_objectiveCalls % _outputPeriod == 0)
             _optLog << _objectiveCalls;
 
-        // Create a copy of the init state; we need a consistent state.
+        // Copy the model's state. We need a consistent state to access the
+        // model's configuration and related speeds.
         SimTK::State aState = initState;
         _cat.getMultibodySystem().realize(aState, SimTK::Stage::Acceleration);
         const OpenSim::CoordinateSet& coordinates = _cat.getCoordinateSet();
@@ -448,7 +451,7 @@ public:
         // --------------------------------------------------------------------
 
 
-        // Update the log and outputs based on this objective function value
+        // Update the log and outputs with the objective function value
         // --------------------------------------------------------------------
         _lastCallWasBestYet = _thisCallIsBestYet;
         _thisCallIsBestYet = f <= _objectiveFcnValueBestYet;
@@ -457,18 +460,18 @@ public:
         if (_objectiveCalls % _outputPeriod == 0)
             _optLog << " objfcn " << f << " objfcn_best_yet " << _objectiveFcnValueBestYet << std::endl;
 
-        // If this is the best yet, save a copy of the splines.
+        // If this is the best yet (i.e., smallest objective function value),
+        // save a copy of the splines.
         if (_thisCallIsBestYet)
         {
             for (unsigned int iFcn = 0; iFcn < _splinesBestYet.size(); iFcn++)
                 _splinesBestYet[iFcn] = *_splines[iFcn];
         }
 
-        // If we just got worse, print out the best-yet splines and
-        // current model. Note: current model is NOT "best yet", but the
-        // idea is that it'll be close. Also print out nondimensionalized
-        // splines so that they can be used directly as input for a subsequent
-        // optimization.
+        // If this is worse, print out the best-yet splines and current model
+        // (NOTE: current model is NOT "best yet", but the idea is that it will
+        // be close). Also print out nondimensionalized splines so that they can
+        // be used directly as input for a subsequent optimization.
         if (_lastCallWasBestYet && !_thisCallIsBestYet)
         {
             printBestYetPrescribedControllerFunctionSet(
@@ -486,7 +489,7 @@ public:
     }
 
     /**
-     * @brief Prints the current model to the given file name.  The file will
+     * @brief Prints the current model to the given filename.  The file will
      * be located in the directory containing the log file for this
      * optimization run.
      * */
@@ -514,20 +517,20 @@ public:
 
     /**
      * @brief Serializes the set of functions associated with the best-yet
-     *     value of the objective function.
-     * The file will be located in the directory containing the log file
-     * for this optimization run.
-     * @param nondimensionalize Divide spline values by minControl for the
-     *     actuator, if value and minControl are negative, and by maxControl,
-     *     if value is positive. If nondimensionalized, this FunctionSet can
-     *     be used as initial parameters.
+     * value of the objective function. The file will be located in the
+     * directory containing the log file for this optimization run.
+     *
+     * @param (nondimensionalize) Divide spline values by minControl for the
+     * actuator, if value and minControl are negative, and by maxControl, if
+     * value is positive. Once nondimensionalized, this FunctionSet can be used
+     * as initial parameters.
      * */
     void printBestYetPrescribedControllerFunctionSet(std::string filename,
             bool nondimensionalize=false) const
     {
         using OpenSim::SimmSpline;
 
-        // Create the FunctionSet that we'll then serialize.
+        // Create the FunctionSet that we will then serialize.
         OpenSim::FunctionSet fset;
         fset.setSize(_splinesBestYet.size());
         for (unsigned int iFcn = 0; iFcn < _splinesBestYet.size(); iFcn++)
@@ -535,7 +538,7 @@ public:
             fset.insert(iFcn, _splinesBestYet[iFcn]);
 
             if (nondimensionalize)
-            { // Go through each y-value and nondim. it based on its sign.
+            { // Go through each y-value and nondimensionalize based on its sign.
 
                 // Max/min for all spline points for the i-th actuator.
                 double minControl = _cat.getActuators().get(iFcn).getMinControl();
@@ -566,7 +569,9 @@ private:
     // Objective function terms
     // --------------------------------------------------------------------
 
-    // Helper for the member functions above.
+    /**
+     * Helper function for writing data to the log.
+     * */
     double processObjTerm(std::string name, double weight, double term) const
     {
         if (_objectiveCalls % _outputPeriod == 0)
@@ -574,14 +579,15 @@ private:
         return weight * term;
     }
 
-    // These functions must be 'const' because objectiveFunc() is const; cannot
-    // call member functions within a const member function unless those
-    // functions are also const.
-
-    // These functions are also defined inline (definition is inside the class
-    // definition) for efficiency: the compiler will 'paste' the function body
-    // into the place where the function is called.
-
+    /**
+    * The following functions must be 'const' because objectiveFunc() is const;
+    * cannot call member functions within a const member function unless those
+    * functions are also const.
+    *
+    * These functions are also defined inline (definition is inside the class
+    * definition) for efficiency: the compiler will 'paste' the function body
+    * into the place where the function is called.
+    * */
     double anteriorLegsDownTerm(
             double roll, double rollRate, double rollAccel) const
     {
@@ -676,21 +682,21 @@ private:
     double taskspaceTerms(SimTK::State& aState, const OpenSim::CoordinateSet & coordinates) const
     {
         if (_tool.get_taskspace_anterior_legs_down_weight() != 0.0 ||
-                _tool.get_taskspace_posterior_legs_down_weight() != 0.0)
-        { // Task-space flip conditions.
-
+            _tool.get_taskspace_posterior_legs_down_weight() != 0.0)
+        {
             double toReturn = 0.0;
 
-            // Construct the position of the pivot point.
+            // Construct the position of the model's pivot point.
             double tx = coordinates.get("tx").getValue(aState);
             double ty = coordinates.get("ty").getValue(aState);
             double tz = coordinates.get("tz").getValue(aState);
             SimTK::Vec3 pivotPointPosFromGroundPointInGround(tx, ty, tz);
 
-            if (_tool.get_taskspace_anterior_legs_down_weight() != 0)
+            // Compute difference between current and desired vector representing
+            // anterior legs down in task space.
+            if (_tool.get_taskspace_anterior_legs_down_weight() != 0.0)
             {
-                // All vectors instantiated in this scope are expressed
-                // in ground frame.
+                // All vectors instantiated in this scope are expressed in ground frame.
                 SimTK::Vec3 anteriorFeetPosFromGroundPointInGround;
                 _cat.getSimbodyEngine().transformPosition(aState, 
                         _cat.getBodySet().get("anteriorBody"),
@@ -711,10 +717,11 @@ private:
                         SimTK::dot(diff, diff));
             }
 
+            // Compute difference between current and desired vector representing
+            // posterior legs down in task space.
             if (_tool.get_taskspace_posterior_legs_down_weight() != 0.0)
             {
-                // All vectors instantiated in this scope are expressed
-                // in ground frame.
+                // All vectors instantiated in this scope are expressed in ground frame.
                 SimTK::Vec3 posteriorFeetPosFromGroundPointInGround;
                 _cat.getSimbodyEngine().transformPosition(aState,
                         _cat.getBodySet().get("posteriorBody"),
@@ -739,60 +746,58 @@ private:
         return 0.0;
     }
 
+    
     // Member variables
     // --------------------------------------------------------------------
 
-    // See constructor.
-    std::string _name;
-
-    // See constructor.
+    // Reference to the FlippinFelinesOptimizerTool.
     OpenSim::FlippinFelinesOptimizerTool & _tool;
-
-    // NOTE: 'mutable' lets us modify the member variable inside const member
-    // ----  functions, such as objectiveFunc() above.
-
-    // The model containing the attributes described in this class'
-    // description.
-    mutable OpenSim::Model _cat;
-
-    // See constructor.
-    int _numOptimSplinePoints;
-
-    // The amount of time for which the simulation runs. Units of seconds.
+    
+    // Simulation runtime (seconds).
     double _duration;
-
+    
+    // Model containing the attributes described in this class' description
+    // (NOTE: 'mutable' lets us modify the member variable inside const member
+    // functions, such as objectiveFunc() above).
+    mutable OpenSim::Model _cat;
+    
     // Number of actuators in the model.
     int _numActuators;
+    
+    // Number of points used to define splines for actuator control.
+    int _numOptimSplinePoints;
 
-    // A vector of the spline functions used in the PrescribedController.
+    // Vector of splines used in the PrescribedController.
     std::vector<OpenSim::SimmSpline *> _splines;
 
-    // Vector of the splines that gave the best objective value yet.
+    // Vector of splines that gave the best objective value yet.
     mutable std::vector<OpenSim::SimmSpline> _splinesBestYet;
 
-    // Counts the number of calls to objectiveFunc.
+    // Number of calls to the objective function.
     mutable int _objectiveCalls;
+    
+    // Relative weighting of velocity/acceleration terms in objective.
+    double _relw;
+    
+    // For task-space objectives:
+    SimTK::Vec3 _anteriorFeetPosFromPivotPointInAnterior;
+    SimTK::Vec3 _posteriorFeetPosFromPivotPointInPosterior;
 
-    // To record details of this run.
+    // Name of results directory.
+    std::string _name;
+    
+    // Log for recording data during optimization
     mutable std::ofstream _optLog;
 
     // Period for how often objective terms are printed to the log.
     static const int _outputPeriod = 100;
 
-    // The best (lowest) value of the objective function, for logging.
+    // Best (lowest) value of the objective function, for logging.
     mutable double _objectiveFcnValueBestYet;
 
-    // To aid with conservative printing of best yet actuation.
+    // To aid with conservative printing of best yet actuation:
     mutable bool _lastCallWasBestYet;
     mutable bool _thisCallIsBestYet;
-
-    // For task-space objectives.
-    SimTK::Vec3 _anteriorFeetPosFromPivotPointInAnterior;
-    // For task-space objectives.
-    SimTK::Vec3 _posteriorFeetPosFromPivotPointInPosterior;
-
-    // Relative weighting of velocity/acceleration terms.
-    double _relw;
 
 };
 
