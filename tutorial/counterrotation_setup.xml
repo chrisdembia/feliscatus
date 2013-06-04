@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<OpenSimDocument Version="30000">
+	<FelisCatusOptimizerTool>
+		<!--Directory in which to save optimization log and results-->
+		<results_directory>counterrotation</results_directory>
+		<!--Specifies path to model file, WITH .osim extension-->
+		<model_filename>flippinfelines_hunch_wag.osim</model_filename>
+		<!--Number of points being optimized in each spline function. Constant across all splines. If an initial_parameters_filename is provided, the functions specified in that file must have the correct number of points. We do not error-check for this.-->
+		<num_optim_spline_points>10</num_optim_spline_points>
+		<!--Adds terms to the objective to minimize final value of (roll - Pi) and related speeds-->
+		<anterior_legs_down_weight>10</anterior_legs_down_weight>
+		<!--Adds terms to the objective to minimize final value of (twist - 0) and related speeds-->
+		<posterior_legs_down_weight>1</posterior_legs_down_weight>
+		<!--Final value for hunch coordinate (radians)-->
+		<hunch_value>0.785398163397448</hunch_value>
+		<!--Adds a term to the objective to minimize final difference between hunch and the specified hunch value, as well as the related speeds-->
+		<hunch_weight>1</hunch_weight>
+		<!--Adds a term to the objective to minimize final value of (hunch + 2 * pitch)-->
+		<sagittal_symmetry_weight>1</sagittal_symmetry_weight>
+		<!--Final value for wag coordinate (radians)-->
+		<wag_value>0</wag_value>
+		<!--Adds a term to the objective to minimize final difference between wag and the specified wag value, as well as the related speeds-->
+		<wag_weight>1</wag_weight>
+		<!--Final value for yaw coordinate (radians)-->
+		<yaw_value>0</yaw_value>
+		<!--Adds a term to the objective to minimize final difference between yaw and the specified yaw value, as well as the related speeds-->
+		<yaw_weight>1</yaw_weight>
+		<!--Adds terms to the objective to minimize final value of frontLegs, backLegs, and related speeds-->
+		<legs_prepared_for_landing_weight>0</legs_prepared_for_landing_weight>
+		<!--TRUE: use coordinate limit forces, FALSE: ignore coordinate limit forces-->
+		<use_coordinate_limit_forces>false</use_coordinate_limit_forces>
+		<!--Weighting of velocity and acceleration objective terms, relative to the configuration term for a given objective weight above-->
+		<relative_velaccel_weight>0.1</relative_velaccel_weight>
+		<!--Weighting on penalty for twist being below -Pi/2 or above 3Pi/2 at any point in the simulation-->
+		<large_twist_penalty_weight>0</large_twist_penalty_weight>
+		<!--Weighting on deviation (as a squared vector magnitude) from desired_anterior_feet_pos_from_pivot_point_in_ground. This task-space objective would be used instead of anterior_legs_down.-->
+		<taskspace_anterior_legs_down_weight>1</taskspace_anterior_legs_down_weight>
+		<!--Weighting on deviation (as a squared vector magnitude) from desired_posterior_feet_pos_from_pivot_point_in_ground. This task-space objective would be used instead of anterior_legs_down and posterior_legs_down.-->
+		<taskspace_posterior_legs_down_weight>0</taskspace_posterior_legs_down_weight>
+		<!--Only relevant if using nonzero taskspace_anterior_legs_down_weight.-->
+		<desired_anterior_feet_pos_from_pivot_point_in_ground>-0.05 -1.41 0</desired_anterior_feet_pos_from_pivot_point_in_ground>
+		<!--Only relevant if using nonzero taskspace_posterior_legs_down_weight.-->
+		<desired_posterior_feet_pos_from_pivot_point_in_ground>0.05 -1.41 0</desired_posterior_feet_pos_from_pivot_point_in_ground>
+	</FelisCatusOptimizerTool>
+</OpenSimDocument>
