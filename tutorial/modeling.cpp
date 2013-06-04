@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     cat.addBody(posteriorBody);
 
 
-    // Display goemetry
+    // Display geometry
     // ------------------------------------------------------------------------
     using OpenSim::DisplayGeometry;
     // So that we can see what the cat's up to.
