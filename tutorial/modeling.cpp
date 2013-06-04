@@ -394,7 +394,7 @@ int main(int argc, char *argv[])
     cat.addBody(posteriorLegs);
     
     
-    // Display goemetry
+    // Display geometry
     // ------------------------------------------------------------------------
     // Both legs have the same display geometry.
 
