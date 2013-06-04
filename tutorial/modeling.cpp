@@ -84,10 +84,6 @@ int main(int argc, char *argv[])
     using OpenSim::CustomJoint;
 	// Rotation is defined via YZX Euler angles, named yaw, pitch, and
 	// roll respectively.
-	Vec3 locGAInGround(0);
-    Vec3 orientGAInGround(0);
-    Vec3 locGAInAnterior(0);
-    Vec3 orientGAInAnterior(0);
 
     // To pass to the CustomJoint (farther down), define a SpatialTransform.
     // The SpatialTransfrom has 6 transform axes. The first 3 are rotations,
@@ -119,6 +115,11 @@ int main(int argc, char *argv[])
     groundAnteriorST.updTransformAxis(5).setCoordinateNames(
             Array<std::string>("tz", 1));
     groundAnteriorST.updTransformAxis(5).setAxis(Vec3(0, 0, 1));
+
+	Vec3 locGAInGround(0);
+    Vec3 orientGAInGround(0);
+    Vec3 locGAInAnterior(0);
+    Vec3 orientGAInAnterior(0);
 
     CustomJoint * groundAnterior = new CustomJoint("ground_anterior",
             ground, locGAInGround, orientGAInGround,
@@ -167,10 +168,6 @@ int main(int argc, char *argv[])
     // Anterior to posterior body via a CustomJoint
     // ````````````````````````````````````````````
 	// Rotation is defined via ZYX Euler angles.
-    Vec3 locAPInAnterior(0);
-    Vec3 orientAPInAnterior(0);
-    Vec3 locAPInPosterior(0);
-    Vec3 orientAPInPosterior(0);
 
     OpenSim::SpatialTransform anteriorPosteriorST;
 	anteriorPosteriorST.updTransformAxis(0).setCoordinateNames(
@@ -186,6 +183,11 @@ int main(int argc, char *argv[])
 	anteriorPosteriorST.updTransformAxis(2).setAxis(Vec3(1, 0, 0));
     // There is no translation between the segments, and so we do not name the
     // remaining 3 TransformAxis's in the SpatialTransform.
+
+    Vec3 locAPInAnterior(0);
+    Vec3 orientAPInAnterior(0);
+    Vec3 locAPInPosterior(0);
+    Vec3 orientAPInPosterior(0);
 
     CustomJoint * anteriorPosterior = new CustomJoint("anterior_posterior",
             *anteriorBody, locAPInAnterior, orientAPInAnterior,
