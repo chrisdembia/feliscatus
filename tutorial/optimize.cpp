@@ -48,6 +48,7 @@ int main(int argc, char * argv[])
         // by our OptimizerSystem.
         SimTK::Vector initParameters = sys.initialParameters();
 
+        
         // And we're off! Running the optimization
         // --------------------------------------------------------------------
         try
