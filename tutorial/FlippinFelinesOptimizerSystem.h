@@ -157,7 +157,7 @@ private:
 
 		constructProperty_use_coordinate_limit_forces(true);
 
-        constructProperty_initial_parameters_filename("initial_parameters.xml");
+        constructProperty_initial_parameters_filename("");
     }
 
 };
