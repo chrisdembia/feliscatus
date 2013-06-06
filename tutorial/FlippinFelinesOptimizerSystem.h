@@ -567,7 +567,7 @@ public:
 private:
 
     // Objective function terms
-    // --------------------------------------------------------------------
+    // ------------------------------------------------------------------------
 
     /**
      * Helper function for writing data to the log.
@@ -748,7 +748,7 @@ private:
 
     
     // Member variables
-    // --------------------------------------------------------------------
+    // ------------------------------------------------------------------------
 
     // Reference to the FlippinFelinesOptimizerTool.
     OpenSim::FlippinFelinesOptimizerTool & _tool;
