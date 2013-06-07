@@ -163,11 +163,11 @@ private:
 
 };
 
-}  // end using OpenSim namespace
+}  // end namespace OpenSim
 
 /**
  * Finds a control input history that achieves certain desired features
- * of a cat's flipping maneuver, as determined by the objective function
+ * of a cat's flipping maneuver, as determined by the objective function.
  * The control of the system is performed via a PrescribedController that
  * uses a spline for all actuators.
  *
@@ -352,8 +352,7 @@ public:
      * with this control, computes the objective value resulting from the
      * simulation, and saves the results to output.
      * */
-    int objectiveFunc(const SimTK::Vector & parameters,
-            bool new_parameters,
+    int objectiveFunc(const SimTK::Vector & parameters, bool new_parameters,
             SimTK::Real & f) const
     {
         // Increment the count of calls to this function.
