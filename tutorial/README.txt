@@ -71,4 +71,4 @@ executable that will achieve a flip for the
 flippinfelines_huch_wag_twist_legs.osim model via both the counter-rotation and
 variable-inertia flip mechanisms.
 
-
+Authors: Chris Dembia & Sean Sketch

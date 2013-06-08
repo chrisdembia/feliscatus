@@ -106,4 +106,4 @@ This executable target is not built (commented-out in the
 CMakeLists.txt) since we do not believe it completely implements Kane's model,
 and so we never employed it in the optimization.
 
-Authors: Sean Sketch & Chris Dembia
+Authors: Chris Dembia & Sean Sketch
